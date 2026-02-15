@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Pro - Privé</title>
+    <title>Stock Pro - Photo & Excel</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,32 +17,38 @@
         </div>
 
         <div id="login-section" class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
-            <p class="text-slate-500 mb-6 text-center text-sm">Veuillez vous connecter pour accéder à l'inventaire privé.</p>
+            <p class="text-slate-500 mb-6 text-center text-sm">Veuillez vous connecter pour accéder à l'inventaire.</p>
             <input id="email" type="email" placeholder="Email" class="w-full border p-3 mb-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
             <input id="password" type="password" placeholder="Mot de passe" class="w-full border p-3 mb-6 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-            <button onclick="login()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-xl hover:bg-blue-700 transition">Entrer dans le stock</button>
+            <button onclick="login()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-xl hover:bg-blue-700 transition">Se connecter</button>
         </div>
 
         <div id="stock-section" class="hidden space-y-4">
             
             <div class="flex gap-2">
-                <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher un article..." class="flex-1 border p-3 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-blue-400">
-                <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 rounded-xl hover:bg-green-700 shadow-md flex items-center gap-1 font-semibold">📊 <span class="hidden sm:inline">Excel</span></button>
+                <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher (nom ou lieu)..." class="flex-1 border p-3 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-blue-400">
+                <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 rounded-xl hover:bg-green-700 shadow-md flex items-center gap-1 font-semibold">📊 Excel</button>
             </div>
 
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                 <div class="grid grid-cols-2 gap-2">
-                    <input id="nom" type="text" placeholder="Nom de l'objet" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
-                    <input id="emplacement" type="text" placeholder="Emplacement (ex: Rayon A)" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
+                    <input id="nom" type="text" placeholder="Nom de l'objet" class="border p-2 rounded-lg text-sm outline-none">
+                    <input id="emplacement" type="text" placeholder="Lieu (ex: Garage)" class="border p-2 rounded-lg text-sm outline-none">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <input id="qty" type="number" placeholder="Quantité" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
-                    <input id="img" type="text" placeholder="Lien photo (URL)" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
+                <div class="grid grid-cols-2 gap-2 items-center">
+                    <input id="qty" type="number" placeholder="Quantité" class="border p-2 rounded-lg text-sm outline-none">
+                    <div class="flex flex-col">
+                        <label class="text-[10px] text-slate-400 font-bold uppercase ml-1">Photo (Appareil/Galerie)</label>
+                        <input id="photo-file" type="file" accept="image/*" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
                 </div>
-                <button onclick="ajouterArticle()" class="w-full bg-slate-800 text-white p-2 rounded-lg font-bold hover:bg-slate-900 transition">+ Ajouter au registre</button>
+                <button onclick="ajouterArticleAvecPhoto()" id="btn-ajouter" class="w-full bg-slate-800 text-white p-3 rounded-xl font-bold hover:bg-slate-900 transition flex justify-center items-center gap-2">
+                    <span id="label-ajouter">📸 Enregistrer l'article</span>
+                    <div id="loader" class="hidden animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                </button>
             </div>
 
-            <div id="liste-produits" class="grid gap-3">
+            <div id="liste-produits" class="grid gap-3 pb-10">
                 </div>
         </div>
     </div>
@@ -58,7 +64,7 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const { error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) alert("Identifiants incorrects");
+            if (error) alert("Erreur : " + error.message);
             else checkUser();
         }
 
@@ -81,30 +87,33 @@
         async function chargerProduits() {
             const search = document.getElementById('search').value.toLowerCase();
             let { data, error } = await sb.from('produits').select('*').order('nom');
-            
             if (error) return;
 
-            // Filtrage recherche
             if(search) {
-                data = data.filter(p => p.nom.toLowerCase().includes(search) || (p.emplacement && p.emplacement.toLowerCase().includes(search)));
+                data = data.filter(p => 
+                    p.nom.toLowerCase().includes(search) || 
+                    (p.emplacement && p.emplacement.toLowerCase().includes(search))
+                );
             }
 
             const liste = document.getElementById('liste-produits');
             liste.innerHTML = data.map(p => {
-                const badgeColor = p.quantite == 0 ? 'bg-red-100 text-red-600' : (p.quantite < 5 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600');
+                const badgeColor = p.quantite <= 0 ? 'bg-red-100 text-red-600' : (p.quantite < 5 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600');
+                const imgUrl = p.image_url || 'https://via.placeholder.com/150?text=Pas+d\'image';
+                
                 return `
-                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <img src="${p.image_url || 'https://via.placeholder.com/80?text=Pas+d\'image'}" class="w-16 h-16 rounded-lg object-cover bg-slate-100 shadow-inner">
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <img src="${imgUrl}" onclick="window.open('${imgUrl}')" class="w-20 h-20 rounded-lg object-cover bg-slate-100 cursor-pointer shadow-inner">
                     <div class="flex-1">
                         <div class="flex justify-between items-start">
-                            <h3 class="font-bold text-slate-800">${p.nom}</h3>
-                            <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${badgeColor}">Stock: ${p.quantite}</span>
+                            <h3 class="font-bold text-slate-800 leading-tight">${p.nom}</h3>
+                            <span class="text-[10px] uppercase font-black px-2 py-0.5 rounded-full ${badgeColor}">Stock: ${p.quantite}</span>
                         </div>
-                        <p class="text-xs text-slate-400 mt-1">📍 ${p.emplacement || 'Non défini'}</p>
+                        <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">📍 ${p.emplacement || 'Lieu inconnu'}</p>
                         <div class="flex gap-2 mt-2">
-                            <button onclick="updateQty('${p.id}', ${p.quantite - 1})" class="bg-slate-100 px-3 py-1 rounded-md font-bold hover:bg-slate-200 transition">-</button>
-                            <button onclick="updateQty('${p.id}', ${p.quantite + 1})" class="bg-slate-100 px-3 py-1 rounded-md font-bold hover:bg-slate-200 transition">+</button>
-                            <button onclick="supprimerArticle('${p.id}')" class="ml-auto text-slate-300 hover:text-red-400">🗑️</button>
+                            <button onclick="updateQty('${p.id}', ${p.quantite - 1})" class="bg-slate-100 px-4 py-1 rounded-lg font-black hover:bg-slate-200">-</button>
+                            <button onclick="updateQty('${p.id}', ${p.quantite + 1})" class="bg-slate-100 px-4 py-1 rounded-lg font-black hover:bg-slate-200">+</button>
+                            <button onclick="supprimerArticle('${p.id}')" class="ml-auto text-slate-200 hover:text-red-400">🗑️</button>
                         </div>
                     </div>
                 </div>
@@ -112,23 +121,54 @@
             }).join('');
         }
 
-        async function ajouterArticle() {
+        async function ajouterArticleAvecPhoto() {
             const nom = document.getElementById('nom').value;
             const quantite = parseInt(document.getElementById('qty').value);
             const emplacement = document.getElementById('emplacement').value;
-            const image_url = document.getElementById('img').value;
+            const photoFile = document.getElementById('photo-file').files[0];
+            
+            if(!nom || isNaN(quantite)) return alert("Nom et quantité obligatoires !");
 
-            if(!nom || isNaN(quantite)) return alert("Le nom et la quantité sont requis");
+            // Afficher le loader
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('label-ajouter').innerText = "Téléchargement...";
 
+            let image_url = "";
+
+            // 1. Upload de la photo si présente
+            if (photoFile) {
+                const fileExt = photoFile.name.split('.').pop();
+                const fileName = `${Date.now()}.${fileExt}`;
+                const { data: upData, error: upError } = await sb.storage
+                    .from('photos-stock')
+                    .upload(fileName, photoFile);
+
+                if (upError) {
+                    alert("Erreur upload photo : " + upError.message);
+                    resetBtn();
+                    return;
+                }
+                const { data: urlData } = sb.storage.from('photos-stock').getPublicUrl(fileName);
+                image_url = urlData.publicUrl;
+            }
+
+            // 2. Insert en base
             const { error } = await sb.from('produits').insert([{ nom, quantite, emplacement, image_url }]);
+            
             if (error) alert(error.message);
             else {
                 document.getElementById('nom').value = "";
                 document.getElementById('qty').value = "";
                 document.getElementById('emplacement').value = "";
-                document.getElementById('img').value = "";
+                document.getElementById('photo-file').value = "";
                 chargerProduits();
             }
+            resetBtn();
+        }
+
+        function resetBtn() {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('label-ajouter').innerText = "📸 Enregistrer l'article";
         }
 
         async function updateQty(id, newQty) {
@@ -138,19 +178,18 @@
         }
 
         async function supprimerArticle(id) {
-            if(confirm("Supprimer cet article ?")) {
+            if(confirm("Supprimer cet article définitivement ?")) {
                 await sb.from('produits').delete().eq('id', id);
                 chargerProduits();
             }
         }
 
-        // --- EXPORT EXCEL ---
         async function exportToExcel() {
             const { data } = await sb.from('produits').select('nom, quantite, emplacement');
             const worksheet = XLSX.utils.json_to_sheet(data);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Stock");
-            XLSX.writeFile(workbook, "Mon_Stock.xlsx");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Inventaire");
+            XLSX.writeFile(workbook, "Mon_Stock_Export.xlsx");
         }
 
         checkUser();
