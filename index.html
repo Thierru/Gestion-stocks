@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RTE EMASI V2 - Gestion Stock</title>
+<title>RTE EMASI V1.10 - Gestion Stock</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
@@ -46,6 +46,7 @@ body { font-family: sans-serif; background: #f8fafc; }
     <button class="tab-btn text-blue-600 font-black" data-tab="pieces">📦 Stock</button>
     <button class="tab-btn text-slate-400 font-black" data-tab="materiel">🛠️ Outils</button>
     <button class="tab-btn text-slate-400 font-black" data-tab="achats">💰 Budget</button>
+    <button class="tab-btn text-slate-400 font-black" data-tab="historique">📜 Historique</button>
     <button class="tab-btn text-slate-400 font-black" data-tab="admin">⚙️ Admin</button>
 </nav>
 
@@ -70,6 +71,11 @@ body { font-family: sans-serif; background: #f8fafc; }
     <div id="liste-achats" class="space-y-2"></div>
 </section>
 
+<section id="tab-historique" class="tabs-content mt-4">
+    <h2 class="font-black text-lg mb-2">Historique des mouvements</h2>
+    <div id="liste-historique" class="space-y-2"></div>
+</section>
+
 <section id="tab-admin" class="tabs-content mt-4 space-y-4">
     <button id="btn-export" class="w-full bg-emerald-600 text-white p-3 rounded-xl font-black">📥 Export CSV</button>
     <input type="file" id="csv-import" accept=".csv" class="w-full mt-2 p-2 border rounded-xl">
@@ -90,22 +96,22 @@ document.addEventListener("DOMContentLoaded", () => {
     let userPseudo = "";
     let html5QrCode = null;
 
-    function notify(msg) {
-        const n = document.getElementById('notifier');
-        document.getElementById('notify-msg').innerText = msg.toUpperCase();
-        n.style.display = "block";
-        setTimeout(()=> n.style.display="none",2500);
+    function notify(msg){
+        const n=document.getElementById('notifier');
+        document.getElementById('notify-msg').innerText=msg.toUpperCase();
+        n.style.display="block";
+        setTimeout(()=>n.style.display="none",2500);
     }
 
-    async function login() {
-        const e = document.getElementById('pseudo').value;
-        const p = document.getElementById('password').value;
-        const { error } = await sb.auth.signInWithPassword({ email:e, password:p });
+    async function login(){
+        const e=document.getElementById('pseudo').value;
+        const p=document.getElementById('password').value;
+        const {error} = await sb.auth.signInWithPassword({email:e,password:p});
         if(error) return alert("Email ou mot de passe invalide");
         checkUser();
     }
 
-    async function checkUser() {
+    async function checkUser(){
         const { data:{user} } = await sb.auth.getUser();
         if(user){
             userPseudo = user.email.split('@')[0].toUpperCase();
@@ -113,11 +119,12 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('app-header').classList.remove('hidden');
             chargerDonnees();
+            chargerHistorique();
         }
     }
 
-    document.getElementById('btn-login').addEventListener('click', login);
-    document.getElementById('btn-logout').addEventListener('click', async()=>{await sb.auth.signOut();location.reload();});
+    document.getElementById('btn-login').addEventListener('click',login);
+    document.getElementById('btn-logout').addEventListener('click',async()=>{await sb.auth.signOut(); location.reload();});
 
     document.querySelectorAll('.tab-btn').forEach(btn=>{
         btn.addEventListener('click', ()=>{
@@ -129,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     async function chargerDonnees(){
-        const { data, error } = await sb.from('produits').select('*').order('nom');
+        const { data,error } = await sb.from('produits').select('*').order('nom');
         if(error) return console.error(error);
         renderPieces(data||[]);
         renderMateriel(data||[]);
@@ -137,39 +144,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderPieces(data){
-        const s = document.getElementById('search').value.toLowerCase();
-        const pieces = data.filter(p=>p.categorie==='PIECE' && p.nom.toLowerCase().includes(s));
-        document.getElementById('liste-pieces').innerHTML = pieces.map(p=>`
-            <div class="card-info ${p.quantite<=(p.seuil_critique||0)?'low-stock':''}">
-                <div class="flex justify-between items-center">
-                    <span class="font-black">${p.nom}</span>
-                    <div class="flex items-center gap-1">
-                        <button onclick="updateStock('${p.id}',-1,'${p.nom}')" class="px-2 bg-gray-200 rounded">-</button>
-                        <span>${p.quantite||0}</span>
-                        <button onclick="updateStock('${p.id}',1,'${p.nom}')" class="px-2 bg-blue-200 rounded">+</button>
-                    </div>
+        const s=document.getElementById('search').value.toLowerCase();
+        const pieces=data.filter(p=>p.categorie==='PIECE' && p.nom.toLowerCase().includes(s));
+        document.getElementById('liste-pieces').innerHTML=pieces.map(p=>`
+            <div class="card-info ${p.quantite<=(p.seuil_critique||0)?'low-stock':''} flex gap-3 items-center">
+                <img src="${p.image_url||'https://via.placeholder.com/40'}" class="w-14 h-14 object-cover rounded-xl border">
+                <div class="flex-1">
+                    <h3 class="font-black">${p.nom}</h3>
+                    <p class="text-xs text-slate-400">Barcode: ${p.barcode||'---'}</p>
+                    <p class="text-xs text-slate-400">Zone: ${p.zone_principale||''} - ${p.zone_precision||''}</p>
+                    <p class="text-xs text-slate-400">Stock: ${p.quantite||0} / Seuil: ${p.seuil_critique||0}</p>
+                    <p class="text-xs text-slate-400">Prix: ${p.prix_unitaire||0} €</p>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <button onclick="updateStock('${p.id}',1,'${p.nom}')" class="px-2 bg-blue-200 rounded">+</button>
+                    <button onclick="updateStock('${p.id}',-1,'${p.nom}')" class="px-2 bg-gray-200 rounded">-</button>
                 </div>
             </div>
         `).join('');
     }
 
     function renderMateriel(data){
-        const materiel = data.filter(p=>p.categorie==='MATERIEL');
-        document.getElementById('liste-materiel').innerHTML = materiel.map(p=>`
-            <div class="card-info flex justify-between items-center">
-                <span class="font-black">${p.nom}</span>
-                <span class="${p.etat==='OK'?'text-green-600':'text-red-600'}">${p.etat}</span>
+        const materiel=data.filter(p=>p.categorie==='MATERIEL');
+        document.getElementById('liste-materiel').innerHTML=materiel.map(p=>`
+            <div class="card-info flex gap-3 items-center">
+                <img src="${p.image_url||'https://via.placeholder.com/40'}" class="w-14 h-14 object-cover rounded-xl border">
+                <div class="flex-1">
+                    <h3 class="font-black">${p.nom}</h3>
+                    <p class="text-xs text-slate-400">Zone: ${p.zone_principale||''} - ${p.zone_precision||''}</p>
+                    <p class="text-xs text-slate-400">Stock: ${p.quantite||0} / Seuil: ${p.seuil_critique||0}</p>
+                    <p class="text-xs text-slate-400">Prix: ${p.prix_unitaire||0} €</p>
+                    <span class="${p.etat==='OK'?'text-green-600':'text-red-600'} font-black">${p.etat||'OK'}</span>
+                </div>
+                <div>
+                    <button onclick="alert('Edition à venir')">⚙️</button>
+                </div>
             </div>
         `).join('');
     }
 
     async function updateStock(id,diff,nom){
         const { data } = await sb.from('produits').select('quantite').eq('id',id).single();
-        const n = (data.quantite||0)+diff;
+        const n=(data.quantite||0)+diff;
         if(n<0) return;
         await sb.from('produits').update({quantite:n}).eq('id',id);
-        await sb.from('historique').insert([{produit_nom:nom, utilisateur:userPseudo, action:diff>0?"ENTRÉE":"SORTIE", quantite_finale:n}]);
+        await sb.from('historique').insert([{produit_nom:nom,utilisateur:userPseudo,action:diff>0?"ENTRÉE":"SORTIE",quantite_finale:n}]);
         chargerDonnees();
+        chargerHistorique();
     }
 
     function calculerBudget(data){
@@ -178,11 +199,20 @@ document.addEventListener("DOMContentLoaded", () => {
             const manque=(p.seuil_critique||0)-(p.quantite||0);
             if(manque>0||p.etat==='HS') total+=((p.etat==='HS'?1:manque)*(p.prix_unitaire||0));
         });
-        document.getElementById('total-budget').innerText = total.toFixed(2).replace('.',',')+' €';
+        document.getElementById('total-budget').innerText=total.toFixed(2).replace('.',',')+' €';
     }
 
-    // Scanner
-    document.getElementById('btn-scan').addEventListener('click', toggleScanner);
+    async function chargerHistorique(){
+        const { data } = await sb.from('historique').select('*').order('date_action',{ascending:false}).limit(20);
+        document.getElementById('liste-historique').innerHTML=(data||[]).map(l=>`
+            <div class="card-info flex justify-between items-center text-xs">
+                <span>${l.produit_nom} (${l.action})</span>
+                <span>${l.quantite_finale} / ${l.utilisateur}</span>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('btn-scan').addEventListener('click',toggleScanner);
 
     async function toggleScanner(){
         const c=document.getElementById('scanner-container');
