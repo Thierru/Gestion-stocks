@@ -3,42 +3,184 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RTE EMASI Login Test</title>
+<title>RTE EMASI V2 - Gestion Stock</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<!-- QR / image compression -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+
 <style>
 body { font-family: sans-serif; background: #f8fafc; }
-#login-section { max-width: 400px; margin: 50px auto; padding: 20px; background: #fff; border-radius: 20px; }
-input, button { width: 100%; padding: 10px; margin-top: 10px; }
+.tabs-content { display: none; }
+.tabs-content.active { display: block; }
+.card-info { background: white; border-radius: 1rem; padding: 1rem; border: 1px solid #e2e8f0; }
+.low-stock { border: 2px solid #ef4444 !important; background: #fef2f2; }
+#notifier { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; background: rgba(255,255,255,0.95); padding: 1rem; border-radius: 1.5rem; border: 2px solid #3b82f6; text-align: center; }
 </style>
 </head>
 <body>
 
-<div id="login-section">
-    <h2>Connexion</h2>
-    <input id="pseudo" type="email" placeholder="E-mail">
-    <input id="password" type="password" placeholder="Mot de passe">
-    <button id="btn-login">Se connecter</button>
+<!-- Notification -->
+<div id="notifier"><p id="notify-msg" class="font-black uppercase text-blue-900 text-xs"></p></div>
+
+<!-- Login -->
+<div id="login-section" class="max-w-xl mx-auto mt-20 p-8 bg-white rounded-3xl shadow-xl border">
+    <h2 class="font-black text-center mb-4">Accès Inventaire</h2>
+    <input id="pseudo" type="email" placeholder="E-mail" class="w-full p-4 rounded-xl border mb-2">
+    <input id="password" type="password" placeholder="Mot de passe" class="w-full p-4 rounded-xl border mb-4">
+    <button id="btn-login" class="w-full bg-blue-600 text-white p-4 rounded-xl font-black uppercase">Se connecter</button>
 </div>
+
+<!-- Application principale -->
+<main id="main-app" class="hidden max-w-3xl mx-auto p-4 space-y-4">
+
+    <!-- Header -->
+    <header id="app-header" class="hidden flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-black text-slate-900">RTE <span class="text-blue-600">EMASI</span></h1>
+        <button id="btn-logout" class="text-xs font-black bg-white px-4 py-2 rounded-full border shadow-sm">Déconnexion</button>
+    </header>
+
+    <!-- Onglets -->
+    <nav class="flex justify-around bg-white p-2 rounded-2xl shadow-lg">
+        <button class="tab-btn text-blue-600 font-black" data-tab="pieces">📦 Stock</button>
+        <button class="tab-btn text-slate-400 font-black" data-tab="materiel">🛠️ Outils</button>
+        <button class="tab-btn text-slate-400 font-black" data-tab="achats">💰 Budget</button>
+        <button class="tab-btn text-slate-400 font-black" data-tab="admin">⚙️ Admin</button>
+    </nav>
+
+    <!-- Tabs Content -->
+    <section id="tab-pieces" class="tabs-content active space-y-4 mt-4">
+        <div class="flex gap-2">
+            <input id="search" type="text" placeholder="Chercher article..." class="flex-1 p-4 rounded-2xl border">
+            <button id="btn-scan" class="bg-blue-600 text-white w-14 rounded-2xl flex items-center justify-center text-xl">📷</button>
+        </div>
+        <button id="btn-add-piece" class="w-full bg-white border-2 border-dashed border-blue-200 p-3 rounded-2xl font-black text-blue-600 text-sm">+ Ajouter Article</button>
+        <div id="liste-pieces" class="grid gap-3"></div>
+    </section>
+
+    <section id="tab-materiel" class="tabs-content space-y-4 mt-4">
+        <button id="btn-add-materiel" class="w-full bg-slate-900 text-white p-3 rounded-2xl font-black text-sm">+ Nouveau Matériel</button>
+        <div id="liste-materiel" class="grid gap-3"></div>
+    </section>
+
+    <section id="tab-achats" class="tabs-content mt-4">
+        <h2 class="font-black text-lg mb-2">Budget estimé</h2>
+        <p id="total-budget" class="text-2xl font-black">0,00 €</p>
+        <div id="liste-achats" class="space-y-2"></div>
+    </section>
+
+    <section id="tab-admin" class="tabs-content mt-4 space-y-4">
+        <button id="btn-export" class="w-full bg-emerald-600 text-white p-3 rounded-xl font-black">📥 Export CSV</button>
+        <input type="file" id="csv-import" accept=".csv" class="w-full mt-2 p-2 border rounded-xl">
+        <button id="btn-import" class="w-full bg-blue-100 text-blue-700 p-3 rounded-xl font-black mt-2">🚀 Import CSV</button>
+    </section>
+</main>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
     const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
     const sb = supabase.createClient(S_URL, S_KEY);
+    let userPseudo = "";
 
-    async function login() {
-        const email = document.getElementById('pseudo').value;
-        const password = document.getElementById('password').value;
-        const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) {
-            alert("Email ou mot de passe invalide : " + error.message);
-            return;
-        }
-        alert("Connexion réussie !");
+    // Notification
+    function notify(msg) {
+        const n = document.getElementById('notifier');
+        document.getElementById('notify-msg').innerText = msg.toUpperCase();
+        n.style.display = "block";
+        setTimeout(()=> n.style.display = "none", 2500);
     }
 
+    // Login
+    async function login() {
+        const e = document.getElementById('pseudo').value;
+        const p = document.getElementById('password').value;
+        const { error } = await sb.auth.signInWithPassword({ email: e, password: p });
+        if (error) return alert("Email ou mot de passe invalide");
+        checkUser();
+    }
+
+    async function checkUser() {
+        const { data: { user } } = await sb.auth.getUser();
+        if(user) {
+            userPseudo = user.email.split('@')[0].toUpperCase();
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('app-header').classList.remove('hidden');
+            chargerDonnees();
+        }
+    }
+
+    // Logout
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+        await sb.auth.signOut();
+        location.reload();
+    });
+
+    // Login button
     document.getElementById('btn-login').addEventListener('click', login);
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e)=>{
+            document.querySelectorAll('.tabs-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('text-blue-600'));
+            btn.classList.add('text-blue-600');
+        });
+    });
+
+    // Charger données
+    async function chargerDonnees() {
+        const { data, error } = await sb.from('produits').select('*').order('nom');
+        if(error) return console.error(error);
+        renderPieces(data || []);
+        renderMateriel(data || []);
+        calculerBudget(data || []);
+    }
+
+    function renderPieces(data) {
+        const s = document.getElementById('search').value.toLowerCase();
+        const pieces = data.filter(p => p.categorie==='PIECE' && p.nom.toLowerCase().includes(s));
+        document.getElementById('liste-pieces').innerHTML = pieces.map(p=>`
+            <div class="card-info ${p.quantite <= (p.seuil_critique||0) ? 'low-stock':''}">
+                <div class="flex justify-between items-center">
+                    <span class="font-black">${p.nom}</span>
+                    <span>${p.quantite || 0}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderMateriel(data) {
+        const materiel = data.filter(p => p.categorie==='MATERIEL');
+        document.getElementById('liste-materiel').innerHTML = materiel.map(p=>`
+            <div class="card-info flex justify-between items-center">
+                <span class="font-black">${p.nom}</span>
+                <span class="${p.etat==='OK'?'text-green-600':'text-red-600'}">${p.etat}</span>
+            </div>
+        `).join('');
+    }
+
+    function calculerBudget(data) {
+        let total = 0;
+        data.forEach(p=>{
+            const manque = (p.seuil_critique||0) - (p.quantite||0);
+            if(manque>0 || p.etat==='HS'){
+                total += ((p.etat==='HS'?1:manque) * (p.prix_unitaire||0));
+            }
+        });
+        document.getElementById('total-budget').innerText = total.toFixed(2).replace('.',',') + " €";
+    }
+
+    // Initial check
+    checkUser();
 });
 </script>
+
 </body>
 </html>
