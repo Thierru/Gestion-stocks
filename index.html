@@ -23,26 +23,34 @@
                 <input id="qty" type="number" placeholder="Quantité" class="w-full border p-2 mb-2 rounded">
                 <button onclick="ajouterArticle()" class="w-full bg-green-500 text-white p-2 rounded">+ Ajouter</button>
             </div>
-            <ul id="liste-produits" class="space-y-2"></ul>
-            <button onclick="logout()" class="mt-4 text-red-500 text-sm">Déconnexion</button>
+            <ul id="liste-produits" class="space-y-2 mb-4"></ul>
+            <button onclick="logout()" class="w-full text-red-500 text-sm border border-red-200 py-1 rounded">Déconnexion</button>
         </div>
     </div>
 
     <script>
+        // Configuration
         const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
         const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
-        const supabase = supabase.createClient(S_URL, S_KEY);
+        
+        // Initialisation du client (nommé 'sb' pour éviter les erreurs)
+        const sb = supabase.createClient(S_URL, S_KEY);
 
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await sb.auth.signInWithPassword({ email, password });
             if (error) alert("Erreur: " + error.message);
             else checkUser();
         }
 
+        async function logout() {
+            await sb.auth.signOut();
+            location.reload(); // Recharge la page pour masquer le stock
+        }
+
         async function checkUser() {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await sb.auth.getUser();
             if (user) {
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('stock-section').classList.remove('hidden');
@@ -51,12 +59,16 @@
         }
 
         async function chargerProduits() {
-            const { data } = await supabase.from('produits').select('*');
+            const { data, error } = await sb.from('produits').select('*').order('nom', { ascending: true });
+            if (error) {
+                console.error(error);
+                return;
+            }
             const liste = document.getElementById('liste-produits');
             liste.innerHTML = data.map(p => `
-                <li class="flex justify-between border-b py-2">
+                <li class="flex justify-between border-b py-2 text-gray-700">
                     <span>${p.nom}</span>
-                    <span class="font-bold">x${p.quantite}</span>
+                    <span class="font-bold bg-gray-100 px-2 rounded">x${p.quantite}</span>
                 </li>
             `).join('');
         }
@@ -64,11 +76,22 @@
         async function ajouterArticle() {
             const nom = document.getElementById('nom').value;
             const quantite = document.getElementById('qty').value;
-            await supabase.from('produits').insert([{ nom, quantite }]);
-            chargerProduits();
+            
+            if(!nom || !quantite) return alert("Remplis les deux champs !");
+
+            const { error } = await sb.from('produits').insert([{ nom: nom, quantite: parseInt(quantite) }]);
+            
+            if (error) {
+                alert("Erreur d'ajout : " + error.message);
+            } else {
+                document.getElementById('nom').value = "";
+                document.getElementById('qty').value = "";
+                chargerProduits();
+            }
         }
 
-        checkUser(); // Vérifie si on est déjà connecté au chargement
+        // Vérification automatique au démarrage
+        checkUser();
     </script>
 </body>
 </html>
