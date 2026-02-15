@@ -205,3 +205,85 @@
             const action = newQty > p.quantite ? "➕ AJOUT" : "➖ SORTIE";
             await sb.from('produits').update({ quantite: newQty }).eq('id', id);
             await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: action, quantite_finale: newQty }]);
+            chargerProduits();
+        }
+
+        async function preparerEdition(id) {
+            const { data } = await sb.from('produits').select('*').eq('id', id).single();
+            document.getElementById('edit-id').value = data.id; 
+            document.getElementById('nom').value = data.nom; 
+            document.getElementById('barcode').value = data.barcode || "";
+            document.getElementById('emplacement').value = data.emplacement;
+            document.getElementById('qty').value = data.quantite; 
+            document.getElementById('prix').value = data.prix_unitaire; 
+            document.getElementById('seuil').value = data.seuil_critique;
+            document.getElementById('btn-delete').classList.remove('hidden');
+            if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.currentTarget.classList.replace('text-slate-300', 'text-blue-600');
+            if(tab === 'achats') calculerAchats(); if(tab === 'logs') chargerLogs();
+        }
+
+        async function chargerLogs() {
+            const { data } = await sb.from('historique').select('*').order('date_action', { ascending: false }).limit(30);
+            const liste = document.getElementById('liste-logs');
+            liste.innerHTML = data ? data.map(l => `<div class="p-4 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span class="${l.action.includes('AJOUT') ? 'text-green-600' : 'text-red-600'}">${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('') : "";
+        }
+
+        async function calculerAchats() {
+            const { data } = await sb.from('produits').select('*');
+            const alertes = data.filter(p => p.quantite <= p.seuil_critique);
+            let total = 0;
+            document.getElementById('liste-achats').innerHTML = alertes.map(p => {
+                const manque = (p.seuil_critique + 5) - p.quantite;
+                const cout = manque * p.prix_unitaire; total += cout;
+                return `<div class="bg-white p-4 rounded-2xl border-l-4 border-red-500 flex justify-between items-center text-xs shadow-sm"><div class="font-black uppercase">${p.nom}</div><p class="font-black text-slate-800">${cout.toFixed(2)} €</p></div>`;
+            }).join('');
+            document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
+        }
+
+        async function exporterExcel() {
+            const { data } = await sb.from('produits').select('nom, barcode, emplacement, quantite, prix_unitaire, seuil_critique').order('nom');
+            const wsData = data.map(p => ({ "ARTICLE": p.nom, "CODE_VALEUR": p.barcode || "", "Lieu": p.emplacement || "", "Stock": p.quantite, "Prix_EUR": p.prix_unitaire, "Alerte": p.seuil_critique }));
+            const ws = XLSX.utils.json_to_sheet(wsData);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventaire");
+            XLSX.writeFile(wb, `RTE_LORRAINE_ETIQUETTES.xlsx`);
+        }
+
+        document.getElementById('import-excel').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const excelData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                const { data: currentDb } = await sb.from('produits').select('nom');
+                const existingNoms = currentDb.map(p => p.nom.toLowerCase());
+                for (let row of excelData) {
+                    const nomArticle = row["ARTICLE"]; if(!nomArticle) continue;
+                    const payload = { barcode: row["CODE_VALEUR"] ? row["CODE_VALEUR"].toString() : "", emplacement: row["Lieu"] || "", quantite: parseInt(row["Stock"]) || 0, prix_unitaire: parseFloat(row["Prix_EUR"]) || 0, seuil_critique: parseInt(row["Alerte"]) || 0 };
+                    if (existingNoms.includes(nomArticle.toLowerCase())) await sb.from('produits').update(payload).eq('nom', nomArticle);
+                    else await sb.from('produits').insert([{ nom: nomArticle, ...payload }]);
+                }
+                alert("Importation réussie !"); chargerProduits();
+            };
+            reader.readAsBinaryString(e.target.files[0]);
+        });
+
+        function toggleForm() { 
+            document.getElementById('form-container').classList.toggle('hidden'); 
+            if(document.getElementById('form-container').classList.contains('hidden')) {
+                resetForm();
+                document.getElementById('btn-delete').classList.add('hidden');
+            }
+        }
+        function resetForm() { document.querySelectorAll('#form-container input').forEach(i => i.value = ""); document.getElementById('edit-id').value = ""; }
+        function envoyerRapportMail() { window.location.href = `mailto:thierry.p057@gmail.com?subject=Rapport RTE LORRAINE&body=Budget réappro : ${document.getElementById('total-budget').innerText}.`; }
+        checkUser();
+    </script>
+</body>
+</html>
