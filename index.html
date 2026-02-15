@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE EMASI LORRAINE - V3.1</title>
+    <title>RTE EMASI LORRAINE - V3.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -50,38 +50,37 @@
                 <div class="grid grid-cols-2 gap-2">
                     <button onclick="exporterExcel()" class="bg-emerald-600 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md active:scale-95 transition-all">📊 Export (Étiquettes)</button>
                     <label class="bg-amber-500 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md active:scale-95 transition-all text-center cursor-pointer">
-                        📥 Import / Ajout
+                        📥 Import / Ajout Excel
                         <input type="file" id="import-excel" class="hidden" accept=".xlsx, .xls">
                     </label>
                 </div>
 
                 <div class="flex gap-2">
                     <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher ou scanné..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
-                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl" title="Scanner un Code-barres ou QR Code">📷</button>
+                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl">📷</button>
                 </div>
 
                 <div id="scanner-container" class="hidden bg-white p-4 rounded-3xl border shadow-inner">
                     <div id="reader"></div>
-                    <p class="text-[10px] text-center text-slate-400 mt-2">Compatible : Codes-barres & QR Codes</p>
-                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Arrêter la caméra</button>
+                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Fermer la caméra</button>
                 </div>
                 
-                <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article</button>
+                <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article / Modifier</button>
                 
                 <div id="form-container" class="hidden bg-white p-6 rounded-[2rem] border shadow-2xl space-y-4">
                     <input id="edit-id" type="hidden">
-                    <div><label>Désignation</label><input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-3 rounded-xl bg-slate-50"></div>
-                    <div><label>ID Code (Barre ou QR)</label><input id="barcode" type="text" placeholder="Numéro du code" class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase"></div>
+                    <div><label>Désignation</label><input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                    <div><label>ID Code (Barre ou QR)</label><input id="barcode" type="text" placeholder="Numéro scanné" class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase outline-none"></div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label>Lieu</label><input id="emplacement" type="text" class="w-full border p-3 rounded-xl bg-slate-50"></div>
-                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50"></div>
+                        <div><label>Lieu / Armoire</label><input id="emplacement" type="text" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                        <div><label>Stock Actuel</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label>Prix (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50"></div>
-                        <div><label>Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50"></div>
+                        <div><label>Prix (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                        <div><label>Seuil Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     </div>
                     <div class="flex gap-3 pt-2">
-                        <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg">Enregistrer</button>
+                        <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Enregistrer</button>
                         <button onclick="toggleForm()" class="bg-slate-100 text-slate-500 px-4 rounded-2xl font-bold uppercase text-[10px]">Annuler</button>
                     </div>
                 </div>
@@ -91,9 +90,9 @@
 
             <div id="tab-achats" class="tabs-content space-y-4">
                 <div class="bg-gradient-to-br from-blue-700 to-blue-900 p-8 rounded-[2.5rem] text-white shadow-xl text-center">
-                    <p class="text-[10px] uppercase font-black opacity-60">Prévisionnel Achats</p>
+                    <p class="text-[10px] uppercase font-black opacity-60 tracking-widest">Prévisionnel Achats</p>
                     <h2 id="total-budget" class="text-4xl font-black mt-1">0.00 €</h2>
-                    <button onclick="envoyerRapportMail()" class="mt-6 w-full bg-white text-blue-800 py-3 rounded-xl text-[10px] font-black uppercase shadow-md">📧 Envoyer à Thierry</button>
+                    <button onclick="envoyerRapportMail()" class="mt-6 w-full bg-white text-blue-800 py-3 rounded-xl text-[10px] font-black uppercase shadow-md">📧 Envoyer le rapport à Thierry</button>
                 </div>
                 <div id="liste-achats" class="grid gap-3"></div>
             </div>
@@ -116,7 +115,7 @@
             const pseudo = document.getElementById('pseudo').value;
             const password = document.getElementById('password').value;
             const { data, error } = await sb.auth.signInWithPassword({ email: pseudo.toLowerCase() + "@emasi.stock", password });
-            if (error) alert("Accès refusé"); else checkUser();
+            if (error) alert("Identifiant ou code incorrect."); else checkUser();
         }
         async function logout() { await sb.auth.signOut(); location.reload(); }
         async function checkUser() {
@@ -130,27 +129,26 @@
             }
         }
 
-        // --- SCANNER UNIVERSEL (CODE BARRE + QR) ---
+        // --- SCANNER HYBRIDE ---
         function toggleScanner() {
             const container = document.getElementById('scanner-container');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
                 html5QrCode = new Html5Qrcode("reader");
-                // Le scanner détecte automatiquement le format (QR, EAN13, Code128, etc)
                 html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 280, height: 180 } },
                     (decodedText) => {
                         document.getElementById('search').value = decodedText;
                         chargerProduits();
                         toggleScanner();
                     }
-                ).catch(err => console.error(err));
+                ).catch(err => console.error("Caméra bloquée :", err));
             } else {
                 container.classList.add('hidden');
                 if(html5QrCode) html5QrCode.stop();
             }
         }
 
-        // --- EXPORT ---
+        // --- EXPORT / IMPORT ---
         async function exporterExcel() {
             const { data } = await sb.from('produits').select('nom, barcode, emplacement, quantite, prix_unitaire, seuil_critique').order('nom');
             const wsData = data.map(p => ({
@@ -164,10 +162,9 @@
             const ws = XLSX.utils.json_to_sheet(wsData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Inventaire");
-            XLSX.writeFile(wb, `RTE_LORRAINE_V3.xlsx`);
+            XLSX.writeFile(wb, `RTE_LORRAINE_ETIQUETTES.xlsx`);
         }
 
-        // --- IMPORT & AJOUT (CORRIGÉ) ---
         document.getElementById('import-excel').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = async (evt) => {
@@ -178,6 +175,7 @@
                 const { data: currentDb } = await sb.from('produits').select('nom');
                 const existingNoms = currentDb.map(p => p.nom.toLowerCase());
                 
+                let successCount = 0;
                 for (let row of excelData) {
                     const nomArticle = row["ARTICLE"];
                     if(!nomArticle) continue;
@@ -191,24 +189,24 @@
                     };
 
                     if (existingNoms.includes(nomArticle.toLowerCase())) {
-                        // MISE A JOUR
                         await sb.from('produits').update(payload).eq('nom', nomArticle);
                     } else {
-                        // AJOUT DE L'ARTICLE MANQUANT
                         await sb.from('produits').insert([{ nom: nomArticle, ...payload }]);
                     }
+                    successCount++;
                 }
-                alert("Synchronisation terminée : nouveaux articles ajoutés !"); 
+                alert(successCount + " articles synchronisés !"); 
                 chargerProduits();
             };
             reader.readAsBinaryString(e.target.files[0]);
         });
 
-        // --- GESTION STOCK ---
+        // --- GESTION DES ARTICLES ---
         async function chargerProduits() {
             const val = document.getElementById('search').value.toLowerCase();
-            let { data } = await sb.from('produits').select('*').order('nom');
-            
+            let { data, error } = await sb.from('produits').select('*').order('nom');
+            if(error) return;
+
             if(val) data = data.filter(p => 
                 p.nom.toLowerCase().includes(val) || 
                 (p.barcode && p.barcode.toLowerCase().includes(val))
@@ -222,26 +220,17 @@
                             <h3 class="font-black text-slate-800 text-[11px] uppercase truncate">${p.nom}</h3>
                             <button onclick="preparerEdition('${p.id}')" class="text-[8px] font-black text-blue-500 border px-2 rounded">MODIFIER</button>
                         </div>
-                        <p class="text-[9px] text-slate-400 font-mono mt-1">${p.barcode ? '🆔 ' + p.barcode : '⚠ Aucun code assigné'}</p>
+                        <p class="text-[9px] text-slate-400 font-mono mt-1">${p.barcode ? '🆔 ' + p.barcode : '⚠ Pas de code'}</p>
                         <div class="flex items-center justify-between mt-2">
                             <div class="flex gap-2">
-                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black">-</button>
-                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black">+</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black shadow-inner">-</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black shadow-inner">+</button>
                             </div>
-                            <span class="text-xl font-black">x${p.quantite}</span>
+                            <span class="text-xl font-black ${p.quantite <= p.seuil_critique ? 'text-red-600' : 'text-slate-800'}">x${p.quantite}</span>
                         </div>
                     </div>
                 </div>
             `).join('');
-        }
-
-        async function updateQty(id, newQty, nom) {
-            if(newQty < 0) return;
-            const { data: p } = await sb.from('produits').select('quantite').eq('id', id).single();
-            const action = newQty > p.quantite ? "➕ AJOUT" : "➖ SORTIE";
-            await sb.from('produits').update({ quantite: newQty }).eq('id', id);
-            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: action, quantite_finale: newQty }]);
-            chargerProduits();
         }
 
         async function ajouterOuModifier() {
@@ -254,9 +243,32 @@
                 prix_unitaire: parseFloat(document.getElementById('prix').value) || 0, 
                 seuil_critique: parseInt(document.getElementById('seuil').value) || 0 
             };
-            if(!obj.nom) return alert("Le nom est obligatoire");
-            if(id) await sb.from('produits').update(obj).eq('id', id); else await sb.from('produits').insert([obj]);
-            toggleForm(); chargerProduits();
+
+            if(!obj.nom) return alert("Le nom de l'article est obligatoire.");
+
+            let result;
+            if(id) {
+                result = await sb.from('produits').update(obj).eq('id', id).select();
+            } else {
+                result = await sb.from('produits').insert([obj]).select();
+            }
+
+            if(result.error) {
+                alert("Erreur Supabase : " + result.error.message + "\nVérifiez que la colonne 'barcode' existe.");
+            } else {
+                alert("Article enregistré avec succès.");
+                toggleForm(); 
+                chargerProduits();
+            }
+        }
+
+        async function updateQty(id, newQty, nom) {
+            if(newQty < 0) return;
+            const { data: p } = await sb.from('produits').select('quantite').eq('id', id).single();
+            const action = newQty > p.quantite ? "➕ AJOUT" : "➖ SORTIE";
+            await sb.from('produits').update({ quantite: newQty }).eq('id', id);
+            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: action, quantite_finale: newQty }]);
+            chargerProduits();
         }
 
         async function preparerEdition(id) {
@@ -268,9 +280,10 @@
             document.getElementById('qty').value = data.quantite; 
             document.getElementById('prix').value = data.prix_unitaire; 
             document.getElementById('seuil').value = data.seuil_critique;
-            toggleForm();
+            if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
         }
 
+        // --- NAVIGATION ---
         function showTab(tab) {
             document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
@@ -282,7 +295,7 @@
         async function chargerLogs() {
             const { data } = await sb.from('historique').select('*').order('date_action', { ascending: false }).limit(30);
             const liste = document.getElementById('liste-logs');
-            liste.innerHTML = data ? data.map(l => `<div class="p-3 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span class="${l.action.includes('AJOUT') ? 'text-green-600' : 'text-red-600'}">${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('') : "";
+            liste.innerHTML = data ? data.map(l => `<div class="p-4 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span class="${l.action.includes('AJOUT') ? 'text-green-600' : 'text-red-600'}">${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('') : "";
         }
 
         async function calculerAchats() {
@@ -292,7 +305,7 @@
             document.getElementById('liste-achats').innerHTML = alertes.map(p => {
                 const manque = (p.seuil_critique + 5) - p.quantite;
                 const cout = manque * p.prix_unitaire; total += cout;
-                return `<div class="bg-white p-4 rounded-2xl border-l-4 border-red-500 flex justify-between items-center text-xs"><div class="font-black uppercase">${p.nom}</div><p class="font-black">${cout.toFixed(2)} €</p></div>`;
+                return `<div class="bg-white p-4 rounded-2xl border-l-4 border-red-500 flex justify-between items-center text-xs shadow-sm"><div class="font-black uppercase">${p.nom}</div><p class="font-black text-slate-800">${cout.toFixed(2)} €</p></div>`;
             }).join('');
             document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
         }
