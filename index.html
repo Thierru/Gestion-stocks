@@ -1,196 +1,213 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RTE EMASI V2.0 - FIX TOTAL</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .tabs-content { display: none; }
-        .tabs-content.active { display: block; }
-        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        .card-info { background: white; border-radius: 1.5rem; padding: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .low-stock { border: 2px solid #ef4444 !important; background: #fef2f2; }
-        #notifier { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTE EMASI - Inventaire</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
+.card { background:white; padding:1rem; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.low-stock { border:2px solid #ef4444; background:#fef2f2;}
+.tabs { display:none; }
+.tabs.active { display:block; }
+.glass { background: rgba(255,255,255,0.95); backdrop-filter:blur(10px); }
+</style>
 </head>
-<body class="pb-32">
+<body class="pb-20">
 
-<div id="notifier" class="glass border-2 border-blue-600 p-4 rounded-2xl shadow-2xl text-center">
-    <p id="notify-msg" class="font-black uppercase text-blue-900 text-xs"></p>
+<div id="login-section" class="max-w-md mx-auto mt-20 p-6 bg-white rounded-2xl shadow-xl">
+    <h1 class="text-center font-black text-xl mb-4">RTE EMASI - Connexion</h1>
+    <input id="email" type="email" placeholder="E-mail" class="w-full p-3 rounded-xl border mb-3">
+    <input id="password" type="password" placeholder="Mot de passe" class="w-full p-3 rounded-xl border mb-3">
+    <button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold">Se connecter</button>
 </div>
 
-<div class="max-w-xl mx-auto p-4">
-    <header id="app-header" class="hidden flex justify-between items-center mb-6 pt-2">
-        <h1 class="text-2xl font-black text-slate-900">RTE <span class="text-blue-600">EMASI</span></h1>
-        <button onclick="logout()" class="text-[10px] font-black bg-white px-4 py-2 rounded-full border shadow-sm">DECONNEXION</button>
-    </header>
+<div id="app" class="max-w-md mx-auto hidden mt-4">
+    <!-- Navigation -->
+    <nav class="flex justify-around mb-4 glass p-2 rounded-2xl shadow">
+        <button onclick="showTab('pieces',event)" class="tab-btn text-blue-600">📦 Pièces</button>
+        <button onclick="showTab('materiel',event)" class="tab-btn text-gray-400">🛠 Matériel</button>
+        <button onclick="showTab('budget',event)" class="tab-btn text-gray-400">💰 Budget</button>
+        <button onclick="showTab('admin',event)" class="tab-btn text-gray-400">⚙️ Admin</button>
+    </nav>
 
-    <div id="login-section" class="bg-white p-8 rounded-[2.5rem] shadow-xl mt-10 border">
-        <h2 class="font-black text-center uppercase mb-6 tracking-tighter text-xl">Accès Inventaire</h2>
-        <div class="space-y-4">
-            <input id="pseudo" type="email" placeholder="E-mail" class="w-full bg-slate-50 p-4 rounded-xl outline-none font-bold border">
-            <input id="password" type="password" placeholder="Mot de passe" class="w-full bg-slate-50 p-4 rounded-xl outline-none font-bold border">
-            <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-4 rounded-xl uppercase shadow-lg">Se connecter</button>
-        </div>
+    <!-- Tabs -->
+    <div id="tab-pieces" class="tabs active">
+        <h2 class="font-black mb-2">Gestion des Pièces</h2>
+        <input id="search-pieces" type="text" placeholder="Chercher article..." class="w-full p-2 mb-2 border rounded-xl" oninput="renderData()">
+        <div id="pieces-list" class="space-y-2"></div>
     </div>
 
-    <main id="main-app" class="hidden space-y-4">
-        <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-lg glass border rounded-[2rem] flex justify-around p-3 z-50 shadow-2xl">
-            <button onclick="showTab('pieces', event)" class="tab-btn active text-blue-600 flex flex-col items-center"><span class="text-xl">📦</span><span class="text-[8px] font-black uppercase mt-1">Stock</span></button>
-            <button onclick="showTab('materiel', event)" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">🛠️</span><span class="text-[8px] font-black uppercase mt-1">Outils</span></button>
-            <button onclick="showTab('achats', event)" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">💰</span><span class="text-[8px] font-black uppercase mt-1">Budget</span></button>
-            <button onclick="showTab('logs', event)" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">📜</span><span class="text-[8px] font-black uppercase mt-1">Logs</span></button>
-            <button onclick="showTab('admin', event)" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">⚙️</span><span class="text-[8px] font-black uppercase mt-1">Admin</span></button>
-        </nav>
+    <div id="tab-materiel" class="tabs">
+        <h2 class="font-black mb-2">Suivi du Matériel</h2>
+        <div id="materiel-list" class="space-y-2"></div>
+    </div>
 
-        <div id="scanner-container" class="hidden fixed inset-0 bg-black z-[200] flex flex-col p-4">
-            <div id="reader" class="w-full rounded-3xl overflow-hidden mt-20"></div>
-            <button onclick="toggleScanner()" class="mt-10 bg-white text-black p-4 rounded-full font-black uppercase">Fermer</button>
-        </div>
+    <div id="tab-budget" class="tabs">
+        <h2 class="font-black mb-2">Estimation du Budget</h2>
+        <div id="budget-list" class="space-y-2"></div>
+        <p class="mt-2 font-bold">Total: <span id="budget-total">0 €</span></p>
+    </div>
 
-        <!-- Tabs Contents... identiques, pas besoin de copier ici -->
+    <div id="tab-admin" class="tabs">
+        <h2 class="font-black mb-2">Administration & Excel</h2>
+        <button onclick="exportCSV()" class="bg-green-600 text-white p-2 rounded-xl w-full mb-2">📥 Export CSV</button>
+        <input type="file" id="csv-file" accept=".csv" class="w-full mb-2">
+        <button onclick="importCSV()" class="bg-blue-600 text-white p-2 rounded-xl w-full">🚀 Import CSV</button>
+    </div>
 
-    </main>
+    <button onclick="logout()" class="mt-4 bg-gray-800 text-white p-2 rounded-xl w-full">Déconnexion</button>
 </div>
 
 <script>
-const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
-const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P"; 
-const sb = supabase.createClient(S_URL, S_KEY);
-let userPseudo = "";
-let html5QrCode; // déclaration globale
+const SUPA_URL = "https://lluihawrhoajckrgvakv.supabase.co";
+const SUPA_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
+const supabase = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-function notify(msg) {
-    const b = document.getElementById('notifier');
-    document.getElementById('notify-msg').innerText = msg.toUpperCase();
-    b.style.display = "block";
-    setTimeout(() => b.style.display = "none", 2500);
-}
+let currentUser = "";
+let allData = [];
 
 async function login() {
-    const e = document.getElementById('pseudo').value;
-    const p = document.getElementById('password').value;
-    const { error } = await sb.auth.signInWithPassword({ email: e.includes('@') ? e : e + "@emasi.stock", password: p });
-    if (error) alert("Email ou mot de passe invalide"); else checkUser();
+    const email = document.getElementById('email').value;
+    const pass = document.getElementById('password').value;
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if(error) return alert("Email ou mot de passe invalide");
+    currentUser = email.split('@')[0].toUpperCase();
+    document.getElementById('login-section').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    loadData();
 }
 
-async function checkUser() {
-    const { data: { user } } = await sb.auth.getUser();
-    if (user) {
-        userPseudo = user.email.split('@')[0].toUpperCase();
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('app-header').classList.remove('hidden');
-        chargerDonnees();
-    }
+async function logout() {
+    await supabase.auth.signOut();
+    location.reload();
 }
 
-async function chargerDonnees() {
-    const { data, error } = await sb.from('produits').select('*').order('nom');
-    if(error) { console.error(error); return; }
-    render(data || []);
-    calculerBudget(data || []);
-    chargerLogs();
+function showTab(tab,event){
+    document.querySelectorAll('.tabs').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-'+tab).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.replace('text-blue-600','text-gray-400'));
+    if(event && event.currentTarget) event.currentTarget.classList.replace('text-gray-400','text-blue-600');
 }
 
-function render(data) {
-    const s = document.getElementById('search').value.toLowerCase();
-    const pieces = data.filter(p => p.categorie === 'PIECE' && p.nom.toLowerCase().includes(s));
-    const materiel = data.filter(p => p.categorie === 'MATERIEL');
+async function loadData(){
+    const { data,error } = await supabase.from('produits').select('*').order('nom');
+    if(error) return console.error(error);
+    allData = data || [];
+    renderData();
+    renderBudget();
+}
 
-    // rendu des pièces
-    document.getElementById('liste-pieces').innerHTML = pieces.map(p => `
-        <div class="card-info ${p.quantite <= (p.seuil_critique||0) ? 'low-stock' : ''}">
-            <div class="flex gap-4">
-                <div class="w-20 h-20 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 border">
-                    ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[8px] text-slate-300">IMAGE</div>`}
+function renderData(){
+    const search = document.getElementById('search-pieces')?.value.toLowerCase()||"";
+    const pieces = allData.filter(p=>p.categorie==='PIECE' && p.nom.toLowerCase().includes(search));
+    const materiel = allData.filter(p=>p.categorie==='MATERIEL');
+
+    const piecesHTML = pieces.map(p=>`
+        <div class="card ${p.quantite<=p.seuil_critique?'low-stock':''}">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="font-bold">${p.nom}</p>
+                    <small>Stock: ${p.quantite} / Seuil: ${p.seuil_critique}</small>
                 </div>
-                <div class="flex-1 min-w-0 flex flex-col justify-between">
-                    <div>
-                        <h3 class="font-black text-slate-800 text-[10px] uppercase truncate">${p.nom}</h3>
-                        <p class="text-[9px] font-bold text-blue-600">📍 ${p.zone_principale || ''} - ${p.zone_precision || ''}</p>
-                        <p class="text-[8px] font-mono text-slate-400 tracking-tighter">${p.barcode || '---'}</p>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-[8px] font-black uppercase text-slate-300">Seuil: ${p.seuil_critique || 0}</span>
-                        <div class="flex items-center gap-2">
-                            <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black">-</button>
-                            <span class="font-black text-sm w-6 text-center">${p.quantite || 0}</span>
-                            <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black text-blue-600">+</button>
-                            <button onclick="ouvrirForm('PIECE', '${p.id}')" class="ml-1">⚙️</button>
-                        </div>
-                    </div>
+                <div class="flex gap-1">
+                    <button onclick="updateStock('${p.id}',-1)" class="bg-gray-200 p-1 rounded">-</button>
+                    <button onclick="updateStock('${p.id}',1)" class="bg-blue-500 text-white p-1 rounded">+</button>
                 </div>
             </div>
         </div>
     `).join('');
+    document.getElementById('pieces-list').innerHTML = piecesHTML;
 
-    // rendu du matériel
-    document.getElementById('liste-materiel').innerHTML = materiel.map(p => `
-        <div class="card-info ${p.etat === 'HS' ? 'low-stock' : ''} flex gap-4 items-center">
-            <div class="w-14 h-14 rounded-xl bg-slate-50 overflow-hidden border">
-                ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `🛠️`}
+    const materielHTML = materiel.map(p=>`
+        <div class="card ${p.etat==='HS'?'low-stock':''}">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="font-bold">${p.nom}</p>
+                    <small>État: ${p.etat}</small>
+                </div>
             </div>
-            <div class="flex-1">
-                <h3 class="font-black text-[9px] uppercase">${p.nom}</h3>
-                <p class="text-[8px] font-bold text-slate-400">📍 ${p.zone_principale || '???'}</p>
-                <span class="text-[8px] font-black uppercase ${p.etat==='OK'?'text-emerald-600':'text-red-600'}">${p.etat || 'OK'}</span>
-            </div>
-            <button onclick="ouvrirForm('MATERIEL', '${p.id}')">⚙️</button>
         </div>
     `).join('');
+    document.getElementById('materiel-list').innerHTML = materielHTML;
 }
 
-async function updateStock(id, diff, nom) {
-    const { data } = await sb.from('produits').select('quantite').eq('id', id).single();
-    const n = (data.quantite || 0) + diff;
-    if (n < 0) { notify("Stock insuffisant"); return; }
-    await sb.from('produits').update({ quantite: n }).eq('id', id);
-    await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: diff > 0 ? "ENTRÉE" : "SORTIE", quantite_finale: n }]);
-    chargerDonnees();
+async function updateStock(id, diff){
+    const prod = allData.find(p=>p.id===id);
+    if(!prod) return;
+    const newQty = (prod.quantite||0)+diff;
+    if(newQty<0) return alert("Stock insuffisant");
+    await supabase.from('produits').update({quantite:newQty}).eq('id',id);
+    await supabase.from('historique').insert([{produit_nom:prod.nom, utilisateur:currentUser, action: diff>0?"ENTRÉE":"SORTIE", quantite_finale:newQty}]);
+    loadData();
 }
 
-// Les autres fonctions restent identiques mais avec upload photo modifié :
-async function traiterPhoto(input) {
-    const file = input.files[0]; if (!file) return;
-    document.getElementById('photo-preview').innerHTML = "⏳";
-    const comp = await imageCompression(file, { maxSizeMB: 0.1 });
-    const path = `img_${Date.now()}.webp`;
-    await sb.storage.from('photos-stock').upload(path, comp, { upsert: true });
-    const { data, error } = sb.storage.from('photos-stock').getPublicUrl(path);
-    if(error){ notify("Erreur image"); return; }
-    document.getElementById('photo-url').value = data.publicUrl;
-    document.getElementById('photo-preview').innerHTML = `<img src="${data.publicUrl}" class="w-full h-full object-cover">`;
+// Budget
+function renderBudget(){
+    let total=0;
+    const items = [];
+    allData.forEach(p=>{
+        const manque = (p.seuil_critique||0)-(p.quantite||0);
+        if(manque>0 || p.etat==='HS'){
+            const q = p.etat==='HS'?1:manque;
+            const prix = q*(p.prix_unitaire||0);
+            total+=prix;
+            if(prix>0) items.push(`<div class="card flex justify-between"><span>${p.nom} x${q}</span><span>${prix.toFixed(2)}€</span></div>`);
+        }
+    });
+    document.getElementById('budget-list').innerHTML = items.join('') || "<p>Aucun besoin</p>";
+    document.getElementById('budget-total').innerText = total.toFixed(2)+" €";
 }
 
-function showTab(t, event) {
-    document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-' + t).classList.add('active');
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-400'));
-    if(event && event.currentTarget) event.currentTarget.classList.replace('text-slate-400', 'text-blue-600');
+// CSV Export
+function exportCSV(){
+    const headers = ["Nom","Barcode","Zone","Precision","Quantite","Seuil","Prix","Categorie","Etat"];
+    let csv = headers.join(";")+"\n";
+    allData.forEach(p=>{
+        csv+=`${p.nom};${p.barcode||""};${p.zone_principale||""};${p.zone_precision||""};${p.quantite};${p.seuil_critique};${p.prix_unitaire||0};${p.categorie};${p.etat||"OK"}\n`;
+    });
+    const blob = new Blob([csv], {type:"text/csv"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download="inventaire.csv";
+    link.click();
 }
 
-async function chargerFiche(id) {
-    const { data } = await sb.from('produits').select('*').eq('id', id).maybeSingle();
-    if(!data){ notify("Fiche introuvable"); return; }
-    document.getElementById('nom').value = data.nom;
-    document.getElementById('barcode').value = data.barcode || "";
-    document.getElementById('zone-1').value = data.zone_principale || "ATELIER";
-    document.getElementById('zone-2').value = data.zone_precision || "";
-    document.getElementById('qty').value = data.quantite;
-    document.getElementById('seuil').value = data.seuil_critique;
-    document.getElementById('prix').value = data.prix_unitaire;
-    document.getElementById('photo-url').value = data.image_url || "";
-    if(data.image_url) document.getElementById('photo-preview').innerHTML = `<img src="${data.image_url}" class="w-full h-full object-cover">`;
+// CSV Import
+function importCSV(){
+    const file = document.getElementById('csv-file').files[0];
+    if(!file) return alert("Choisir un fichier CSV");
+    const reader = new FileReader();
+    reader.onload=async e=>{
+        const lines = e.target.result.split("\n").slice(1).filter(l=>l.trim().length>0);
+        const items = lines.map(l=>{
+            const c = l.split(";").map(x=>x.replace(/"/g,'').trim());
+            if(c.length<2) return null;
+            return {
+                nom:c[0].toUpperCase(),
+                barcode:c[1],
+                zone_principale:c[2]||'ATELIER',
+                zone_precision:c[3]||'',
+                quantite:parseInt(c[4])||0,
+                seuil_critique:parseInt(c[5])||0,
+                prix_unitaire:parseFloat(c[6].replace(',','.'))||0,
+                categorie:c[7]||'PIECE',
+                etat:c[8]||'OK'
+            };
+        }).filter(x=>x!==null);
+        // éviter doublons
+        const unique = Array.from(new Map(items.map(i=>[i.barcode,i])).values());
+        const { error } = await supabase.from('produits').upsert(unique,{onConflict:'barcode'});
+        if(error) return alert("Erreur import: "+error.message);
+        alert("Import terminé");
+        loadData();
+    };
+    reader.readAsText(file);
 }
-
-checkUser();
 </script>
 </body>
 </html>
