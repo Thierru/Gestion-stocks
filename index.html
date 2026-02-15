@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE EMASI LORRAINE - V3.9.1</title>
+    <title>RTE EMASI LORRAINE - V4.0</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -11,9 +11,9 @@
     <style>
         .tabs-content { display: none; }
         .tabs-content.active { display: block; }
-        .low-stock { animation: pulse 1.5s infinite; border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.4); } 100% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } }
-        #reader { width: 100%; border-radius: 20px; overflow: hidden; border: none !important; }
+        .low-stock { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
+        .status-hs { border: 2px solid #991b1b !important; background-color: #fef2f2 !important; }
+        #reader { width: 100%; border-radius: 20px; overflow: hidden; }
         label { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 2px; display: block; }
     </style>
 </head>
@@ -21,103 +21,111 @@
     <div id="app" class="max-w-xl mx-auto p-4">
         
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-xl font-black text-blue-900 italic tracking-tighter uppercase leading-none">
+            <h1 class="text-xl font-black text-blue-900 italic uppercase leading-none">
                 RTE <span class="text-blue-500">EMASI</span> <br>
-                <span class="text-[10px] tracking-[0.2em] text-slate-400 not-italic">LORRAINE</span>
+                <span class="text-[10px] tracking-widest text-slate-400 not-italic">LORRAINE</span>
             </h1>
-            <button onclick="logout()" id="btn-logout" class="hidden text-[10px] bg-white px-3 py-2 rounded-xl shadow-sm text-slate-400 font-bold border border-slate-100 uppercase">Quitter</button>
+            <button onclick="logout()" id="btn-logout" class="hidden text-[10px] bg-white px-3 py-2 rounded-xl shadow-sm font-bold border border-slate-100 uppercase">Quitter</button>
         </div>
 
         <div id="login-section" class="bg-white p-8 rounded-[2.5rem] shadow-xl border mt-10">
-            <h2 class="text-center font-black text-slate-300 mb-8 uppercase tracking-[0.2em] text-xs">Accès Inventaire</h2>
+            <h2 class="text-center font-black text-slate-300 mb-8 uppercase tracking-widest text-xs">Accès Inventaire</h2>
             <div class="space-y-4">
-                <input id="pseudo" type="text" placeholder="Identifiant" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 transition">
-                <input id="password" type="password" placeholder="Code Secret" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 transition">
-                <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-5 rounded-2xl shadow-lg hover:bg-blue-700 transition uppercase tracking-widest mt-4">Se connecter</button>
+                <input id="pseudo" type="text" placeholder="Identifiant" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                <input id="password" type="password" placeholder="Code Secret" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-5 rounded-2xl shadow-lg uppercase tracking-widest">Se connecter</button>
             </div>
         </div>
 
         <div id="main-app" class="hidden space-y-4">
             
-            <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.08)]">
-                <button onclick="showTab('stock')" class="flex flex-col items-center p-2 tab-btn active text-blue-600 text-xl">📦<span class="text-[9px] font-black mt-1 uppercase">Stock</span></button>
-                <button onclick="showTab('achats')" class="flex flex-col items-center p-2 tab-btn text-slate-300 text-xl">🛒<span class="text-[9px] font-black mt-1 uppercase">Achats</span></button>
-                <button onclick="showTab('logs')" class="flex flex-col items-center p-2 tab-btn text-slate-300 text-xl">📜<span class="text-[9px] font-black mt-1 uppercase">Logs</span></button>
+            <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 shadow-lg">
+                <button onclick="showTab('pieces')" class="flex flex-col items-center p-2 tab-btn active text-blue-600">📦<span class="text-[9px] font-black mt-1 uppercase">Pièces</span></button>
+                <button onclick="showTab('materiel')" class="flex flex-col items-center p-2 tab-btn text-slate-300">🛠️<span class="text-[9px] font-black mt-1 uppercase">Matériel</span></button>
+                <button onclick="showTab('achats')" class="flex flex-col items-center p-2 tab-btn text-slate-300">🛒<span class="text-[9px] font-black mt-1 uppercase">Budget</span></button>
+                <button onclick="showTab('logs')" class="flex flex-col items-center p-2 tab-btn text-slate-300">📜<span class="text-[9px] font-black mt-1 uppercase">Logs</span></button>
             </nav>
 
-            <div id="tab-stock" class="tabs-content active space-y-4">
+            <div id="tab-pieces" class="tabs-content active space-y-4">
                 <div class="flex gap-2">
-                    <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
-                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl">📷</button>
+                    <input id="search" oninput="chargerDonnees()" type="text" placeholder="Chercher une pièce..." class="flex-1 border p-5 rounded-3xl shadow-sm outline-none bg-white">
+                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-3xl shadow-lg">📷</button>
                 </div>
-
                 <div id="scanner-container" class="hidden bg-white p-4 rounded-3xl border shadow-inner">
                     <div id="reader"></div>
-                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Fermer Caméra</button>
                 </div>
-                
-                <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article</button>
-                
-                <div id="form-container" class="hidden bg-white p-6 rounded-[2rem] border shadow-2xl space-y-4">
-                    <input id="edit-id" type="hidden">
+                <button onclick="ouvrirForm('PIECE')" class="w-full bg-blue-50 text-blue-700 p-5 rounded-3xl font-black text-sm uppercase italic border border-blue-100">+ Nouvelle Pièce</button>
+                <div id="liste-pieces" class="grid gap-4"></div>
+            </div>
+
+            <div id="tab-materiel" class="tabs-content space-y-4">
+                <div class="flex gap-2">
+                    <input id="search-mat" oninput="chargerDonnees()" type="text" placeholder="Chercher un appareil..." class="flex-1 border p-5 rounded-3xl shadow-sm outline-none bg-white">
+                </div>
+                <button onclick="ouvrirForm('MATERIEL')" class="w-full bg-slate-800 text-white p-5 rounded-3xl font-black text-sm uppercase italic">+ Nouvel Appareil/Outil</button>
+                <div id="liste-materiel" class="grid gap-4"></div>
+            </div>
+
+            <div id="form-container" class="hidden fixed inset-0 bg-white z-[100] p-6 overflow-y-auto">
+                <div class="max-w-xl mx-auto space-y-4">
                     <div class="flex justify-between items-center">
-                        <label class="text-blue-600 font-black">Fiche Article</label>
-                        <button id="btn-delete" onclick="supprimerArticle()" class="hidden bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-red-100">🗑️ Supprimer</button>
+                        <h2 id="form-title" class="text-xl font-black text-blue-600 uppercase">Fiche</h2>
+                        <button onclick="toggleForm()" class="text-slate-400 font-bold">Fermer ✕</button>
                     </div>
+                    <input id="edit-id" type="hidden">
+                    <input id="edit-type" type="hidden">
+
+                    <div><label>Désignation</label><input id="nom" type="text" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none"></div>
+                    <div><label>ID Code (QR/Barre)</label><input id="barcode" type="text" class="w-full border p-4 rounded-2xl bg-slate-50 font-mono text-blue-600 outline-none"></div>
                     
-                    <div><label>Désignation</label><input id="nom" type="text" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                    <div><label>ID Code</label><input id="barcode" type="text" class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 outline-none"></div>
-                    
-                    <div class="grid grid-cols-1 gap-2">
+                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label>Zone (Emplacement 1)</label>
-                            <select id="zone-1" onchange="updateZone2Options(this.value)" class="w-full border p-3 rounded-xl bg-slate-50 outline-none">
-                                <option value="">-- Choisir Zone --</option>
+                            <label>Zone</label>
+                            <select id="zone-1" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none">
                                 <option value="LABO">LABO</option>
                                 <option value="ATELIER">ATELIER</option>
                                 <option value="BUREAU">BUREAU</option>
-                                <option value="NOUVEAU">+ Autre Zone...</option>
+                                <option value="AUTRE">AUTRE</option>
                             </select>
-                            <input id="zone-1-manuel" type="text" placeholder="Nom de la nouvelle zone" class="hidden mt-2 w-full border p-3 rounded-xl bg-amber-50 outline-none">
+                        </div>
+                        <div><label>Précision (Armoire/Etage)</label><input id="zone-2" type="text" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none"></div>
+                    </div>
+
+                    <div id="fields-piece" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none"></div>
+                            <div><label>Seuil Alerte</label><input id="seuil" type="number" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none"></div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2">
+                    <div id="fields-materiel" class="hidden space-y-4">
                         <div>
-                            <label>Précision (Emplacement 2)</label>
-                            <select id="zone-2" onchange="handleZone2Change(this.value)" class="w-full border p-3 rounded-xl bg-slate-50 outline-none">
-                                <option value="">-- Choisir Précision --</option>
+                            <label>État de l'appareil</label>
+                            <select id="etat-materiel" class="w-full border p-4 rounded-2xl bg-slate-50 font-bold outline-none">
+                                <option value="OK" class="text-green-600">✅ OPÉRATIONNEL</option>
+                                <option value="HS" class="text-red-600">❌ HS (À REMPLACER)</option>
+                                <option value="CO" class="text-orange-600">⏳ EN ÉTALONNAGE</option>
                             </select>
-                            <input id="zone-2-manuel" type="text" placeholder="Précision libre" class="hidden mt-2 w-full border p-3 rounded-xl bg-amber-50 outline-none">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label>Quantité Stock</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                        <div><label>Seuil d'Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                    </div>
-                    <div><label>Prix HT (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                    <div><label>Prix HT Unitaire (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none"></div>
                     
-                    <div class="flex gap-3 pt-2">
-                        <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg">Enregistrer</button>
-                        <button onclick="toggleForm()" class="bg-slate-100 text-slate-500 px-4 rounded-2xl font-bold uppercase text-[10px]">Fermer</button>
-                    </div>
+                    <button onclick="sauvegarder()" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase shadow-lg mt-4">Enregistrer</button>
+                    <button id="btn-delete" onclick="supprimerArticle()" class="w-full text-red-500 font-bold text-xs uppercase pt-4 hidden">Supprimer l'article</button>
                 </div>
-
-                <div id="liste-produits" class="grid gap-4"></div>
             </div>
 
             <div id="tab-achats" class="tabs-content space-y-4">
-                <div class="bg-gradient-to-br from-blue-700 to-blue-900 p-8 rounded-[2.5rem] text-white shadow-xl text-center">
-                    <p class="text-[10px] uppercase font-black opacity-60 tracking-widest">Budget Réappro</p>
+                <div class="bg-blue-900 p-8 rounded-[2.5rem] text-white text-center shadow-xl">
+                    <p class="text-[10px] uppercase font-black opacity-60">Estimation Thierry</p>
                     <h2 id="total-budget" class="text-4xl font-black mt-1">0.00 €</h2>
-                    <button onclick="envoyerRapportMail()" class="mt-6 w-full bg-white text-blue-800 py-3 rounded-xl text-[10px] font-black uppercase shadow-md">📧 Envoyer rapport à Thierry</button>
                 </div>
                 <div id="liste-achats" class="grid gap-3"></div>
             </div>
 
             <div id="tab-logs" class="tabs-content space-y-4">
-                <div id="liste-logs" class="bg-white rounded-xl border shadow-sm divide-y"></div>
+                <div id="liste-logs" class="bg-white rounded-2xl border divide-y"></div>
             </div>
         </div>
     </div>
@@ -129,19 +137,18 @@
         let userPseudo = "";
         let html5QrCode;
 
-        function notifier(message, type = "success") {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-10 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full font-black text-xs shadow-2xl transition-all transform duration-500 text-center ${type === 'success' ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'}`;
-            toast.innerHTML = message;
-            document.body.appendChild(toast);
-            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-[-20px]'); setTimeout(() => toast.remove(), 500); }, 2500);
+        function notifier(msg) {
+            const t = document.createElement('div');
+            t.className = "fixed top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full text-xs font-black z-[200] shadow-2xl";
+            t.innerHTML = msg; document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
         }
 
         async function login() {
-            const pseudo = document.getElementById('pseudo').value;
-            const password = document.getElementById('password').value;
-            const { data, error } = await sb.auth.signInWithPassword({ email: pseudo.toLowerCase() + "@emasi.stock", password });
-            if (error) alert("Accès refusé."); else checkUser();
+            const p = document.getElementById('pseudo').value;
+            const pw = document.getElementById('password').value;
+            const { error } = await sb.auth.signInWithPassword({ email: p.toLowerCase() + "@emasi.stock", password: pw });
+            if (error) alert("Erreur connexion"); else checkUser();
         }
         async function logout() { await sb.auth.signOut(); location.reload(); }
         async function checkUser() {
@@ -151,78 +158,45 @@
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('btn-logout').classList.remove('hidden');
-                chargerProduits();
+                chargerDonnees();
             }
         }
 
-        const sousZonesPrefinies = {
-            "LABO": ["Armoire 1", "Armoire 2"],
-            "ATELIER": ["Etagère 1", "Etagère 2"],
-            "BUREAU": ["Armoire 1", "Armoire 2"]
-        };
-
-        function updateZone2Options(zone) {
-            const select2 = document.getElementById('zone-2');
-            const m1 = document.getElementById('zone-1-manuel');
-            select2.innerHTML = '<option value="">-- Choisir Précision --</option><option value="NOUVEAU">+ Choix libre / Nouveau...</option>';
-            m1.classList.add('hidden');
-            if (zone === "NOUVEAU") {
-                m1.classList.remove('hidden');
-                document.getElementById('zone-2').value = "NOUVEAU";
-                handleZone2Change("NOUVEAU");
-            } else if (sousZonesPrefinies[zone]) {
-                sousZonesPrefinies[zone].forEach(sz => {
-                    const opt = document.createElement('option'); opt.value = sz; opt.textContent = sz; select2.appendChild(opt);
-                });
-                document.getElementById('zone-2-manuel').classList.add('hidden');
-            }
+        function ouvrirForm(type, id = null) {
+            resetForm();
+            document.getElementById('edit-type').value = type;
+            document.getElementById('form-title').innerText = type === 'PIECE' ? 'Détails Pièce' : 'Détails Matériel';
+            document.getElementById('fields-piece').style.display = type === 'PIECE' ? 'block' : 'none';
+            document.getElementById('fields-materiel').style.display = type === 'MATERIEL' ? 'block' : 'none';
+            if(id) chargerFiche(id);
+            toggleForm();
         }
 
-        function handleZone2Change(val) {
-            const m2 = document.getElementById('zone-2-manuel');
-            if (val === "NOUVEAU") m2.classList.remove('hidden'); else m2.classList.add('hidden');
+        async function chargerDonnees() {
+            const { data } = await sb.from('produits').select('*').order('nom');
+            renderPieces(data.filter(p => (p.categorie || 'PIECE') === 'PIECE'));
+            renderMateriel(data.filter(p => p.categorie === 'MATERIEL'));
+            calculerBudget(data);
         }
 
-        function toggleScanner() {
-            const container = document.getElementById('scanner-container');
-            if (container.classList.contains('hidden')) {
-                container.classList.remove('hidden');
-                html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 280, height: 180 } },
-                    async (decodedText) => { toggleScanner(); await traiterScan(decodedText); }
-                ).catch(err => console.error(err));
-            } else { container.classList.add('hidden'); if(html5QrCode) html5QrCode.stop(); }
-        }
-
-        async function traiterScan(code) {
-            const { data } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
-            if (data) { notifier(`✅ TROUVÉ : ${data.nom.toUpperCase()}`); preparerEdition(data.id); }
-            else { notifier(`🆕 NOUVEAU CODE`, "info"); resetForm(); document.getElementById('barcode').value = code; toggleForm(); }
-        }
-
-        async function chargerProduits() {
-            const val = document.getElementById('search').value.toLowerCase();
-            let { data } = await sb.from('produits').select('*').order('nom');
-            if(val) data = data.filter(p => p.nom.toLowerCase().includes(val) || (p.barcode && p.barcode.toLowerCase().includes(val)));
-            
-            document.getElementById('liste-produits').innerHTML = data.map(p => `
-                <div class="bg-white p-5 rounded-[2rem] shadow-sm flex flex-col gap-3 border ${p.quantite <= p.seuil_critique ? 'low-stock' : 'border-slate-100'}">
+        function renderPieces(data) {
+            const search = document.getElementById('search').value.toLowerCase();
+            const filtered = data.filter(p => p.nom.toLowerCase().includes(search));
+            document.getElementById('liste-pieces').innerHTML = filtered.map(p => `
+                <div class="bg-white p-5 rounded-3xl shadow-sm border ${p.quantite <= p.seuil_critique ? 'low-stock' : 'border-slate-100'}">
                     <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h3 class="font-black text-slate-800 text-sm uppercase leading-tight">${p.nom}</h3>
-                            <div class="flex flex-wrap gap-2 mt-2">
-                                <span class="text-[9px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md border border-blue-100">🆔 ${p.barcode || 'SANS CODE'}</span>
-                                <span class="text-[9px] font-bold bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100">📍 ${p.emplacement || 'NON CLASSÉ'}</span>
-                            </div>
+                        <div>
+                            <h3 class="font-black text-slate-800 text-sm uppercase">${p.nom}</h3>
+                            <p class="text-[9px] text-slate-400 font-bold mt-1 uppercase">📍 ${p.emplacement}</p>
                         </div>
-                        <button onclick="preparerEdition('${p.id}')" class="bg-slate-100 p-2 rounded-xl text-lg">⚙️</button>
+                        <button onclick="ouvrirForm('PIECE', '${p.id}')" class="bg-slate-50 p-2 rounded-xl text-lg">⚙️</button>
                     </div>
-                    <div class="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                        <div class="text-[9px] font-bold text-slate-400">STOCK (MIN: ${p.seuil_critique})</div>
-                        <div class="flex items-center gap-3">
+                    <div class="flex justify-between items-center mt-4 bg-slate-50 p-3 rounded-2xl">
+                        <span class="text-[10px] font-black text-slate-400 uppercase">Stock</span>
+                        <div class="flex items-center gap-4">
                             <div class="flex gap-1">
-                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm">-</button>
-                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm">+</button>
+                                <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm">-</button>
+                                <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm">+</button>
                             </div>
                             <span class="text-2xl font-black ${p.quantite <= p.seuil_critique ? 'text-red-600' : 'text-blue-900'}">x${p.quantite}</span>
                         </div>
@@ -231,79 +205,107 @@
             `).join('');
         }
 
-        async function ajouterOuModifier() {
-            const id = document.getElementById('edit-id').value;
-            const z1 = document.getElementById('zone-1').value;
-            const z2 = document.getElementById('zone-2').value;
-            const fz1 = (z1 === "NOUVEAU") ? document.getElementById('zone-1-manuel').value : z1;
-            const fz2 = (z2 === "NOUVEAU") ? document.getElementById('zone-2-manuel').value : z2;
-            const emplacementComplet = (fz1 && fz2) ? `${fz1} - ${fz2}` : (fz1 || fz2 || "Non classé");
+        function renderMateriel(data) {
+            const search = document.getElementById('search-mat').value.toLowerCase();
+            const filtered = data.filter(p => p.nom.toLowerCase().includes(search));
+            document.getElementById('liste-materiel').innerHTML = filtered.map(p => `
+                <div class="bg-white p-5 rounded-3xl shadow-sm border ${p.etat === 'HS' ? 'status-hs' : 'border-slate-100'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-black text-slate-800 text-sm uppercase">${p.nom}</h3>
+                            <p class="text-[9px] text-slate-400 font-bold mt-1 uppercase">📍 ${p.emplacement}</p>
+                        </div>
+                        <button onclick="ouvrirForm('MATERIEL', '${p.id}')" class="bg-slate-50 p-2 rounded-xl text-lg">⚙️</button>
+                    </div>
+                    <div class="mt-3 flex items-center gap-2">
+                        <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${p.etat === 'OK' ? 'bg-green-100 text-green-700' : p.etat === 'HS' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}">
+                            ${p.etat === 'OK' ? '● Opérationnel' : p.etat === 'HS' ? '● HS (À remplacer)' : '● En étalonnage'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-            const obj = { 
-                nom: document.getElementById('nom').value, 
-                barcode: document.getElementById('barcode').value, 
-                emplacement: emplacementComplet, 
-                quantite: parseInt(document.getElementById('qty').value) || 0, 
-                seuil_critique: parseInt(document.getElementById('seuil').value) || 0,
-                prix_unitaire: parseFloat(document.getElementById('prix').value) || 0 
+        async function sauvegarder() {
+            const type = document.getElementById('edit-type').value;
+            const id = document.getElementById('edit-id').value;
+            const payload = {
+                nom: document.getElementById('nom').value,
+                barcode: document.getElementById('barcode').value,
+                emplacement: `${document.getElementById('zone-1').value} - ${document.getElementById('zone-2').value}`,
+                prix_unitaire: parseFloat(document.getElementById('prix').value) || 0,
+                categorie: type,
+                quantite: type === 'PIECE' ? parseInt(document.getElementById('qty').value) || 0 : 1,
+                seuil_critique: type === 'PIECE' ? parseInt(document.getElementById('seuil').value) || 0 : 0,
+                etat: type === 'MATERIEL' ? document.getElementById('etat-materiel').value : 'OK'
             };
 
-            if(!obj.nom) return alert("Nom obligatoire.");
-            const res = id ? await sb.from('produits').update(obj).eq('id', id) : await sb.from('produits').insert([obj]);
-            if(!res.error) { toggleForm(); chargerProduits(); notifier("Enregistré !"); }
+            const res = id ? await sb.from('produits').update(payload).eq('id', id) : await sb.from('produits').insert([payload]);
+            if(!res.error) { toggleForm(); chargerDonnees(); notifier("Enregistré"); }
         }
 
-        async function preparerEdition(id) {
-            const { data } = await sb.from('produits').select('*').eq('id', id).single();
-            document.getElementById('edit-id').value = data.id; 
-            document.getElementById('nom').value = data.nom; 
-            document.getElementById('barcode').value = data.barcode || "";
-            document.getElementById('qty').value = data.quantite; 
-            document.getElementById('seuil').value = data.seuil_critique;
-            document.getElementById('prix').value = data.prix_unitaire; 
-            
-            const parts = (data.emplacement || "").split(' - ');
-            if (parts[0]) {
-                document.getElementById('zone-1').value = parts[0];
-                updateZone2Options(parts[0]);
-                if (parts[1]) {
-                    const z2s = document.getElementById('zone-2');
-                    if (![...z2s.options].some(o => o.value === parts[1])) {
-                        z2s.value = "NOUVEAU";
-                        document.getElementById('zone-2-manuel').classList.remove('hidden');
-                        document.getElementById('zone-2-manuel').value = parts[1];
-                    } else { z2s.value = parts[1]; }
-                }
-            }
-            document.getElementById('btn-delete').classList.remove('hidden');
-            if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
-        }
-
-        async function updateQty(id, newQty, nom) {
+        async function updateStock(id, diff, nom) {
+            const { data } = await sb.from('produits').select('quantite').eq('id', id).single();
+            const newQty = (data.quantite || 0) + diff;
             if(newQty < 0) return;
             await sb.from('produits').update({ quantite: newQty }).eq('id', id);
-            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "MAJ STOCK", quantite_finale: newQty }]);
-            chargerProduits();
+            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: diff > 0 ? "➕ AJOUT" : "➖ SORTIE", quantite_finale: newQty }]);
+            chargerDonnees();
         }
 
-        async function calculerAchats() {
-            const { data } = await sb.from('produits').select('*');
-            const alertes = data.filter(p => p.quantite <= p.seuil_critique);
+        function calculerBudget(data) {
             let total = 0;
-            document.getElementById('liste-achats').innerHTML = alertes.map(p => {
-                const manque = (p.seuil_critique + 5) - p.quantite;
-                const cout = manque * p.prix_unitaire; total += cout;
-                return `<div class="bg-white p-4 rounded-2xl border-l-4 border-red-500 flex justify-between items-center text-xs shadow-sm"><div class="font-black uppercase">${p.nom}<br><span class="text-[9px] text-slate-400">Manque: ${manque}</span></div><p class="font-black text-slate-800">${cout.toFixed(2)} €</p></div>`;
-            }).join('');
+            const achats = [];
+            
+            data.forEach(p => {
+                if(p.categorie === 'MATERIEL' && p.etat === 'HS') {
+                    total += p.prix_unitaire;
+                    achats.push({ nom: p.nom, raison: "MATÉRIEL HS", prix: p.prix_unitaire });
+                } else if ((p.categorie || 'PIECE') === 'PIECE' && p.quantite <= p.seuil_critique) {
+                    const manque = (p.seuil_critique + 5) - p.quantite;
+                    const cout = manque * p.prix_unitaire;
+                    total += cout;
+                    achats.push({ nom: p.nom, raison: `STOCK FAIBLE (${manque}u)`, prix: cout });
+                }
+            });
+
             document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
+            document.getElementById('liste-achats').innerHTML = achats.map(a => `
+                <div class="bg-white p-4 rounded-2xl flex justify-between border-l-4 ${a.raison === 'MATÉRIEL HS' ? 'border-red-800' : 'border-red-400'}">
+                    <div class="text-[10px] font-black uppercase">${a.nom}<br><span class="text-slate-400 font-bold">${a.raison}</span></div>
+                    <div class="font-black">${a.prix.toFixed(2)}€</div>
+                </div>
+            `).join('');
         }
 
-        async function supprimerArticle() {
-            const id = document.getElementById('edit-id').value;
-            if(confirm("Supprimer cet article ?")) {
-                await sb.from('produits').delete().eq('id', id);
-                toggleForm(); chargerProduits(); notifier("Supprimé", "info");
-            }
+        async function chargerFiche(id) {
+            const { data } = await sb.from('produits').select('*').eq('id', id).single();
+            document.getElementById('edit-id').value = data.id;
+            document.getElementById('nom').value = data.nom;
+            document.getElementById('barcode').value = data.barcode || "";
+            document.getElementById('prix').value = data.prix_unitaire;
+            document.getElementById('qty').value = data.quantite;
+            document.getElementById('seuil').value = data.seuil_critique;
+            document.getElementById('etat-materiel').value = data.etat || 'OK';
+            const parts = (data.emplacement || "").split(' - ');
+            document.getElementById('zone-1').value = parts[0] || 'LABO';
+            document.getElementById('zone-2').value = parts[1] || '';
+            document.getElementById('btn-delete').classList.remove('hidden');
+        }
+
+        function toggleScanner() {
+            const container = document.getElementById('scanner-container');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (txt) => { toggleScanner(); traiterScan(txt); });
+            } else { container.classList.add('hidden'); if(html5QrCode) html5QrCode.stop(); }
+        }
+
+        async function traiterScan(code) {
+            const { data } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
+            if(data) ouvrirForm(data.categorie || 'PIECE', data.id);
+            else { ouvrirForm('PIECE'); document.getElementById('barcode').value = code; }
         }
 
         function showTab(tab) {
@@ -311,18 +313,35 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
             document.getElementById('tab-' + tab).classList.add('active');
             event.currentTarget.classList.replace('text-slate-300', 'text-blue-600');
-            if(tab === 'achats') calculerAchats();
+            if(tab === 'achats') chargerDonnees();
             if(tab === 'logs') chargerLogs();
         }
 
         async function chargerLogs() {
-            const { data } = await sb.from('historique').select('*').order('date_action', { ascending: false }).limit(30);
-            document.getElementById('liste-logs').innerHTML = data.map(l => `<div class="p-4 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span>${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('');
+            const { data } = await sb.from('historique').select('*').order('date_action', {ascending: false}).limit(30);
+            document.getElementById('liste-logs').innerHTML = data.map(l => `
+                <div class="p-4 flex justify-between text-[10px]">
+                    <span class="font-black uppercase">${l.produit_nom}</span>
+                    <span class="font-bold">${l.action} (${l.quantite_finale})</span>
+                </div>
+            `).join('');
         }
 
-        function toggleForm() { document.getElementById('form-container').classList.toggle('hidden'); if(document.getElementById('form-container').classList.contains('hidden')) resetForm(); }
-        function resetForm() { document.querySelectorAll('#form-container input').forEach(i => i.value = ""); document.getElementById('btn-delete').classList.add('hidden'); document.getElementById('zone-1').value=""; document.getElementById('zone-2').innerHTML='<option value="">-- Choisir Précision --</option>'; }
-        function envoyerRapportMail() { window.location.href = `mailto:thierry.p057@gmail.com?subject=Rapport RTE LORRAINE&body=Budget réappro : ${document.getElementById('total-budget').innerText}.`; }
+        async function supprimerArticle() {
+            const id = document.getElementById('edit-id').value;
+            if(confirm("Supprimer l'article ?")) {
+                await sb.from('produits').delete().eq('id', id);
+                toggleForm(); chargerDonnees();
+            }
+        }
+
+        function toggleForm() { document.getElementById('form-container').classList.toggle('hidden'); }
+        function resetForm() { 
+            document.querySelectorAll('#form-container input').forEach(i => i.value = ""); 
+            document.getElementById('btn-delete').classList.add('hidden');
+            document.getElementById('edit-id').value = "";
+        }
+
         checkUser();
     </script>
 </body>
