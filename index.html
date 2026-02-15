@@ -3,115 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RTE EMASI - V1.8</title>
+    <title>RTE EMASI - V1.9 FULL</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
         .tabs-content { display: none; }
         .tabs-content.active { display: block; }
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-        .card-info { background: white; border-radius: 1.5rem; padding: 1rem; border: 1px solid #e2e8f0; }
-        .low-stock { border: 2px solid #ef4444; background: #fff1f2; }
-        #notifier { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 80%; }
+        .card-info { background: white; border-radius: 1.5rem; padding: 1rem; border: 1px solid #e2e8f0; transition: all 0.2s; }
+        .low-stock { border: 2px solid #ef4444 !important; background: #fff1f2; }
+        #notifier { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; width: 85%; max-width: 400px; }
     </style>
 </head>
 <body class="pb-32">
 
-    <div id="notifier" class="glass border-2 border-blue-500 p-6 rounded-[2rem] shadow-2xl text-center">
-        <p id="notify-msg" class="font-black uppercase text-blue-800 text-sm"></p>
+    <div id="notifier" class="glass border-2 border-blue-500 p-8 rounded-[2.5rem] shadow-2xl text-center">
+        <p id="notify-msg" class="font-black uppercase text-blue-900 tracking-tighter"></p>
     </div>
 
     <div class="max-w-xl mx-auto p-4">
         <header id="app-header" class="hidden flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-black text-blue-900">RTE <span class="text-blue-500">EMASI</span></h1>
-            <button onclick="logout()" class="text-[10px] font-bold bg-white px-4 py-2 rounded-full border">QUITTER</button>
+            <div>
+                <h1 class="text-2xl font-black text-blue-900 leading-none">RTE <span class="text-blue-500">EMASI</span></h1>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gestion de Stock V1.9</p>
+            </div>
+            <button onclick="logout()" class="text-[10px] font-black bg-white px-5 py-2 rounded-full border border-slate-200 shadow-sm uppercase">Quitter</button>
         </header>
 
-        <div id="login-section" class="bg-white p-8 rounded-[2.5rem] shadow-xl mt-10">
-            <input id="pseudo" type="email" placeholder="E-mail" class="w-full bg-slate-100 p-4 rounded-xl mb-4 font-bold outline-none">
-            <input id="password" type="password" placeholder="Mot de passe" class="w-full bg-slate-100 p-4 rounded-xl mb-4 font-bold outline-none">
-            <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-4 rounded-xl uppercase">Connexion</button>
+        <div id="login-section" class="bg-white p-8 rounded-[3rem] shadow-2xl mt-10 border border-slate-100">
+            <h2 class="font-black text-center text-slate-800 uppercase mb-8 tracking-widest">Identification</h2>
+            <div class="space-y-4">
+                <input id="pseudo" type="email" placeholder="E-mail" class="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold border border-slate-100">
+                <input id="password" type="password" placeholder="Mot de passe" class="w-full bg-slate-50 p-5 rounded-2xl outline-none font-bold border border-slate-100">
+                <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-5 rounded-2xl uppercase shadow-lg active:scale-95 transition-transform">Entrer</button>
+            </div>
         </div>
 
         <main id="main-app" class="hidden space-y-4">
-            <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-lg glass border rounded-[2rem] flex justify-around p-3 z-50 shadow-2xl">
-                <button onclick="showTab('pieces')" class="tab-btn active text-blue-600 font-black text-[10px] flex flex-col items-center">📦 <span>PIÈCES</span></button>
-                <button onclick="showTab('materiel')" class="tab-btn text-slate-400 font-black text-[10px] flex flex-col items-center">🛠️ <span>MATOS</span></button>
-                <button onclick="showTab('admin')" class="tab-btn text-slate-400 font-black text-[10px] flex flex-col items-center">⚙️ <span>ADMIN</span></button>
+            
+            <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[94%] max-w-lg glass border border-white rounded-[2.5rem] flex justify-around p-3 z-50 shadow-2xl">
+                <button onclick="showTab('pieces')" class="tab-btn active text-blue-600 flex flex-col items-center"><span class="text-xl">📦</span><span class="text-[9px] font-black uppercase mt-1">Pièces</span></button>
+                <button onclick="showTab('materiel')" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">🛠️</span><span class="text-[9px] font-black uppercase mt-1">Matos</span></button>
+                <button onclick="showTab('achats')" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">🛒</span><span class="text-[9px] font-black uppercase mt-1">Budget</span></button>
+                <button onclick="showTab('logs')" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">📜</span><span class="text-[9px] font-black uppercase mt-1">Logs</span></button>
+                <button onclick="showTab('admin')" class="tab-btn text-slate-400 flex flex-col items-center"><span class="text-xl">⚙️</span><span class="text-[9px] font-black uppercase mt-1">Admin</span></button>
             </nav>
+
+            <div id="scanner-container" class="hidden fixed inset-0 bg-black/95 z-[200] flex flex-col p-6 items-center justify-center">
+                <div id="reader" class="w-full rounded-3xl overflow-hidden border-2 border-white/20"></div>
+                <button onclick="toggleScanner()" class="mt-10 bg-white/10 text-white px-10 py-4 rounded-full font-black uppercase text-xs tracking-widest">Annuler le scan</button>
+            </div>
 
             <section id="tab-pieces" class="tabs-content active space-y-4">
                 <div class="flex gap-2">
-                    <input id="search" oninput="chargerDonnees()" type="text" placeholder="Rechercher..." class="flex-1 p-4 rounded-2xl shadow-inner font-bold outline-none">
-                    <button onclick="toggleScanner()" class="bg-blue-600 text-white w-14 rounded-2xl">📷</button>
+                    <input id="search" oninput="chargerDonnees()" type="text" placeholder="Rechercher une pièce..." class="flex-1 glass p-5 rounded-3xl shadow-sm outline-none font-bold border-white border">
+                    <button onclick="toggleScanner()" class="bg-blue-600 text-white w-16 rounded-3xl shadow-lg flex items-center justify-center text-xl active:scale-90 transition-transform">📷</button>
                 </div>
-                <button onclick="ouvrirForm('PIECE')" class="w-full bg-white border-2 border-dashed border-blue-200 p-3 rounded-2xl font-black text-blue-600 uppercase text-[10px]">+ Nouvel Article</button>
+                <button onclick="ouvrirForm('PIECE')" class="w-full bg-white text-blue-600 p-4 rounded-3xl font-black text-[10px] uppercase shadow-sm border border-blue-100">+ Ajouter un article</button>
                 <div id="liste-pieces" class="grid gap-4"></div>
             </section>
 
             <section id="tab-materiel" class="tabs-content space-y-4">
-                <button onclick="ouvrirForm('MATERIEL')" class="w-full bg-slate-800 text-white p-3 rounded-2xl font-black uppercase text-[10px]">+ Nouveau Matériel</button>
+                <button onclick="ouvrirForm('MATERIEL')" class="w-full bg-slate-800 text-white p-4 rounded-3xl font-black text-[10px] uppercase shadow-lg">+ Nouveau matériel</button>
                 <div id="liste-materiel" class="grid gap-4"></div>
             </section>
 
+            <section id="tab-achats" class="tabs-content space-y-4">
+                <div class="bg-blue-900 p-10 rounded-[3rem] text-white text-center shadow-2xl">
+                    <p class="text-[10px] uppercase font-black opacity-50 tracking-widest mb-2">Estimation Besoins</p>
+                    <h2 id="total-budget" class="text-4xl font-black">0.00 €</h2>
+                </div>
+                <div id="liste-achats" class="grid gap-2"></div>
+            </section>
+
+            <section id="tab-logs" class="tabs-content">
+                <div id="liste-logs" class="bg-white rounded-[2rem] shadow-sm divide-y overflow-hidden border border-slate-100"></div>
+            </section>
+
             <section id="tab-admin" class="tabs-content space-y-4">
-                <div class="bg-white p-6 rounded-3xl border space-y-4">
-                    <button onclick="exporterExcel()" class="w-full bg-emerald-600 text-white p-4 rounded-xl font-black text-xs uppercase">📥 Télécharger le Tableau (Excel)</button>
-                    <div class="border-t pt-4">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Importer un fichier CSV</label>
-                        <input type="file" id="csv-import" accept=".csv" class="block w-full text-xs mt-2">
-                        <button onclick="importerExcel()" class="w-full bg-blue-100 text-blue-700 p-3 rounded-xl font-black text-[10px] uppercase mt-2">🚀 Lancer l'importation</button>
+                <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 space-y-6">
+                    <button onclick="exporterExcel()" class="w-full bg-emerald-600 text-white p-5 rounded-2xl font-black uppercase text-xs shadow-lg">📊 Exporter Tableau Excel (CSV)</button>
+                    <div class="p-5 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                        <label class="text-[10px] font-black text-slate-400 uppercase block mb-3 text-center">Importation de données</label>
+                        <input type="file" id="csv-import" accept=".csv" class="text-[10px] w-full mb-4">
+                        <button onclick="importerExcel()" class="w-full bg-blue-100 text-blue-700 p-4 rounded-xl font-black uppercase text-[10px]">🚀 Lancer l'import</button>
                     </div>
                 </div>
             </section>
 
             <div id="form-container" class="hidden fixed inset-0 bg-white z-[100] p-6 overflow-y-auto">
-                <div class="max-w-xl mx-auto space-y-4 pb-24">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-black text-blue-900 uppercase">Fiche Article</h2>
-                        <button onclick="toggleForm()" class="text-2xl font-bold">✕</button>
+                <div class="max-w-xl mx-auto space-y-4 pb-28">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xl font-black text-blue-900 uppercase">Fiche Technique</h2>
+                        <button onclick="toggleForm()" class="bg-slate-100 w-10 h-10 rounded-full font-bold">✕</button>
                     </div>
 
-                    <div class="relative w-full h-44 bg-slate-100 rounded-3xl overflow-hidden border-2 border-dashed border-slate-300 flex items-center justify-center">
-                        <div id="photo-preview" class="w-full h-full flex items-center justify-center">📸</div>
+                    <div class="relative w-full h-56 bg-slate-50 rounded-[2.5rem] overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center">
+                        <div id="photo-preview" class="w-full h-full flex items-center justify-center text-slate-300">📸</div>
                         <input type="file" id="photo-input" capture="environment" accept="image/*" class="hidden" onchange="traiterPhoto(this)">
-                        <button onclick="document.getElementById('photo-input').click()" class="absolute bottom-2 right-2 bg-blue-600 text-white px-4 py-2 rounded-full font-black text-[9px]">PHOTO</button>
+                        <button onclick="document.getElementById('photo-input').click()" class="absolute bottom-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-full font-black text-[10px] uppercase shadow-xl">Prendre Photo</button>
                     </div>
                     <input type="hidden" id="photo-url">
 
-                    <div class="space-y-3">
+                    <div class="space-y-4">
                         <input id="edit-id" type="hidden"><input id="edit-type" type="hidden">
-                        <input id="nom" type="text" placeholder="DÉSIGNATION" class="w-full bg-slate-50 p-4 rounded-xl font-bold border uppercase">
-                        <input id="barcode" type="text" placeholder="CODE-BARRES" class="w-full bg-slate-50 p-4 rounded-xl font-mono text-blue-600 border">
                         
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[9px] font-black text-slate-400 ml-1">ZONE</label>
-                                <select id="zone-1" class="w-full bg-slate-50 p-4 rounded-xl font-bold border">
+                        <div><label class="text-[9px] font-black text-slate-400 ml-3">DÉSIGNATION</label>
+                        <input id="nom" type="text" class="w-full bg-slate-100 p-5 rounded-2xl outline-none font-bold border-transparent border-2 focus:border-blue-500 uppercase"></div>
+                        
+                        <div><label class="text-[9px] font-black text-slate-400 ml-3">CODE-BARRES</label>
+                        <input id="barcode" type="text" class="w-full bg-slate-100 p-5 rounded-2xl font-mono text-blue-600 border-transparent border-2 focus:border-blue-500"></div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="text-[9px] font-black text-slate-400 ml-3">ZONE PRINCIPALE</label>
+                                <select id="zone-1" class="w-full bg-slate-100 p-5 rounded-2xl font-bold appearance-none">
                                     <option value="ATELIER">ATELIER</option>
                                     <option value="LABO">LABO</option>
                                     <option value="BUREAU">BUREAU</option>
                                     <option value="STOCK CENTRAL">STOCK CENTRAL</option>
-                                    <option value="AUTRE">AUTRE...</option>
+                                    <option value="AUTRE">AUTRE</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="text-[9px] font-black text-slate-400 ml-1">PRÉCISION (RAYON/TIROIR)</label>
-                                <input id="zone-2" type="text" class="w-full bg-slate-50 p-4 rounded-xl font-bold border uppercase" placeholder="EX: A1-02">
+                            <div><label class="text-[9px] font-black text-slate-400 ml-3">PRÉCISION</label>
+                                <input id="zone-2" type="text" class="w-full bg-slate-100 p-5 rounded-2xl font-bold uppercase" placeholder="EX: A1-B2">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2">
-                            <input id="qty" type="number" placeholder="STOCK" class="w-full bg-slate-50 p-4 rounded-xl font-black border">
-                            <input id="seuil" type="number" placeholder="SEUIL" class="w-full bg-slate-50 p-4 rounded-xl font-black border">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="text-[9px] font-black text-slate-400 ml-3">STOCK</label>
+                            <input id="qty" type="number" class="w-full bg-slate-100 p-5 rounded-2xl font-black text-lg"></div>
+                            <div><label class="text-[9px] font-black text-slate-400 ml-3">SEUIL ALERTE</label>
+                            <input id="seuil" type="number" class="w-full bg-slate-100 p-5 rounded-2xl font-black text-lg"></div>
                         </div>
+
+                        <div id="mat-fields" class="hidden">
+                            <label class="text-[9px] font-black text-slate-400 ml-3">ÉTAT MATÉRIEL</label>
+                            <select id="etat-materiel" class="w-full bg-slate-100 p-5 rounded-2xl font-black">
+                                <option value="OK">✅ FONCTIONNEL</option>
+                                <option value="HS">❌ HORS SERVICE</option>
+                                <option value="CO">⏳ ETALONNAGE</option>
+                            </select>
+                        </div>
+
+                        <div><label class="text-[9px] font-black text-slate-400 ml-3">PRIX UNITAIRE HT (€)</label>
+                        <input id="prix" type="number" step="0.01" class="w-full bg-slate-100 p-5 rounded-2xl font-bold"></div>
                     </div>
 
-                    <button onclick="sauvegarder()" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black uppercase shadow-lg">Enregistrer</button>
+                    <button onclick="sauvegarder()" class="w-full bg-blue-600 text-white p-6 rounded-[2rem] font-black uppercase shadow-2xl active:scale-95 transition-transform">Enregistrer la fiche</button>
+                    <button id="btn-delete" onclick="supprimerArticle()" class="w-full text-red-500 font-black uppercase text-[10px] pt-4">🚨 Supprimer définitivement l'article</button>
                 </div>
             </div>
         </main>
@@ -122,12 +165,13 @@
         const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P"; 
         const sb = supabase.createClient(S_URL, S_KEY);
         let userPseudo = "";
+        let html5QrCode;
 
         function notify(msg) {
             const b = document.getElementById('notifier');
             document.getElementById('notify-msg').innerText = msg.toUpperCase();
             b.style.display = "block";
-            setTimeout(() => b.style.display = "none", 2500);
+            setTimeout(() => b.style.display = "none", 2000);
         }
 
         async function login() {
@@ -151,83 +195,137 @@
         async function chargerDonnees() {
             const { data } = await sb.from('produits').select('*').order('nom');
             render(data || []);
+            calculerBudget(data || []);
+            chargerLogs();
         }
 
         function render(data) {
             const s = document.getElementById('search').value.toLowerCase();
             const pieces = data.filter(p => (!p.categorie || p.categorie === 'PIECE') && p.nom.toLowerCase().includes(s));
-            
+            const materiel = data.filter(p => p.categorie === 'MATERIEL');
+
+            // RENDER PIÈCES
             document.getElementById('liste-pieces').innerHTML = pieces.map(p => `
                 <div class="card-info ${p.quantite <= (p.seuil_critique||0) ? 'low-stock' : ''}">
                     <div class="flex gap-4">
-                        <div class="w-20 h-20 rounded-xl bg-slate-100 overflow-hidden border">
-                            ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[8px] text-slate-300 italic">SANS PHOTO</div>`}
+                        <div class="w-24 h-24 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 border border-slate-100">
+                            ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[10px] text-slate-300">📦</div>`}
                         </div>
-                        <div class="flex-1 flex flex-col justify-between">
+                        <div class="flex-1 min-w-0 flex flex-col justify-between">
                             <div>
                                 <h3 class="font-black text-slate-800 text-[11px] uppercase truncate">${p.nom}</h3>
-                                <p class="text-[9px] font-bold text-blue-600">📍 ${p.zone_principale || ''} - ${p.zone_precision || ''}</p>
-                                <p class="text-[8px] font-mono text-slate-400">${p.barcode || 'SANS CODE'}</p>
+                                <p class="text-[9px] font-bold text-blue-600 mt-1">📍 ${p.zone_principale || 'SANS'} - ${p.zone_precision || 'ZONAGE'}</p>
+                                <p class="text-[8px] font-mono text-slate-400 tracking-tighter">${p.barcode || '---'}</p>
                             </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-[8px] font-black text-slate-300">SEUIL: ${p.seuil_critique || 0}</span>
+                            <div class="flex justify-between items-end">
+                                <span class="text-[8px] font-black uppercase text-slate-400">Seuil: ${p.seuil_critique || 0}</span>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black">-</button>
-                                    <span class="font-black text-sm">${p.quantite || 0}</span>
-                                    <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black text-blue-600">+</button>
-                                    <button onclick="ouvrirForm('PIECE', '${p.id}')" class="ml-2">⚙️</button>
+                                    <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="w-8 h-8 bg-slate-100 rounded-xl font-black">-</button>
+                                    <span class="font-black text-lg min-w-[24px] text-center">${p.quantite || 0}</span>
+                                    <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="w-8 h-8 bg-slate-100 rounded-xl font-black text-blue-600">+</button>
+                                    <button onclick="ouvrirForm('PIECE', '${p.id}')" class="ml-1 text-lg">⚙️</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             `).join('');
+
+            // RENDER MATÉRIEL
+            document.getElementById('liste-materiel').innerHTML = materiel.map(p => `
+                <div class="card-info ${p.etat === 'HS' ? 'low-stock' : ''} flex gap-4 items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-50 overflow-hidden border">
+                        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `🛠️`}
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-black text-[10px] uppercase">${p.nom}</h3>
+                        <p class="text-[8px] font-bold text-slate-400">📍 ${p.zone_principale || '???'}</p>
+                        <span class="text-[8px] font-black uppercase ${p.etat==='OK'?'text-emerald-600':'text-red-600'}">${p.etat || 'OK'}</span>
+                    </div>
+                    <button onclick="ouvrirForm('MATERIEL', '${p.id}')" class="text-xl">⚙️</button>
+                </div>
+            `).join('');
+        }
+
+        async function updateStock(id, diff, nom) {
+            const { data } = await sb.from('produits').select('quantite').eq('id', id).single();
+            const n = (data.quantite || 0) + diff; if(n < 0) return;
+            await sb.from('produits').update({ quantite: n }).eq('id', id);
+            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: diff > 0 ? "ENTRÉE" : "SORTIE", quantite_finale: n }]);
+            chargerDonnees();
+        }
+
+        function calculerBudget(data) {
+            let total = 0; const items = [];
+            data.forEach(p => {
+                const manque = (p.seuil_critique || 0) - (p.quantite || 0);
+                if (manque > 0 || p.etat === 'HS') {
+                    const qteAchat = p.etat === 'HS' ? 1 : manque;
+                    const prixTotal = qteAchat * (p.prix_unitaire || 0);
+                    total += prixTotal;
+                    if(prixTotal > 0) items.push(`<div class="bg-white p-4 rounded-2xl flex justify-between text-[10px] font-black uppercase border border-slate-100 shadow-sm"><div>${p.nom} (x${qteAchat})</div><div class="text-blue-600">${prixTotal.toFixed(2)}€</div></div>`);
+                }
+            });
+            document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
+            document.getElementById('liste-achats').innerHTML = items.join('');
+        }
+
+        async function chargerLogs() {
+            const { data } = await sb.from('historique').select('*').order('date_action', {ascending: false}).limit(30);
+            document.getElementById('liste-logs').innerHTML = (data || []).map(l => `
+                <div class="p-5 flex justify-between items-center text-[9px] font-black uppercase bg-white">
+                    <div><span class="text-slate-300 mr-3">${new Date(l.date_action).toLocaleTimeString()}</span>${l.produit_nom}</div>
+                    <div class="${l.action==='ENTRÉE'?'text-emerald-600':'text-red-600'} font-black">${l.action} ➔ ${l.quantite_finale}</div>
+                </div>
+            `).join('');
         }
 
         async function exporterExcel() {
             const { data } = await sb.from('produits').select('*');
-            const entetes = ["Designation", "Barcode", "Zone", "Precision", "Stock", "Seuil", "Categorie"];
-            let csv = entetes.join(";") + "\n";
+            const headers = ["Désignation", "Code-Barres", "Zone", "Précision", "Stock", "Seuil", "Prix", "Catégorie", "État"];
+            let csv = headers.join(";") + "\n";
             data.forEach(r => {
-                csv += `"${r.nom}";"${r.barcode||''}";"${r.zone_principale||''}";"${r.zone_precision||''}";"${r.quantite}";"${r.seuil_critique}";"${r.categorie}"\n`;
+                csv += `"${r.nom}";"${r.barcode||''}";"${r.zone_principale||''}";"${r.zone_precision||''}";"${r.quantite}";"${r.seuil_critique}";"${r.prix_unitaire}";"${r.categorie}";"${r.etat}"\n`;
             });
             const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = "STOCK_RTE.csv";
+            link.download = `STOCK_EXPORT_${new Date().toLocaleDateString()}.csv`;
             link.click();
+            notify("Export terminé");
         }
 
         async function importerExcel() {
-            const file = document.getElementById('csv-import').files[0];
-            if(!file) return alert("Sélectionnez un fichier .csv");
+            const file = document.getElementById('csv-import').files[0]; if(!file) return alert("Fichier manquant");
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const lignes = e.target.result.split("\n").slice(1);
                 const items = lignes.map(l => {
                     const c = l.split(";").map(x => x.replace(/"/g, '').trim());
-                    if(c.length < 2 || !c[1]) return null; // Ignore si pas de barcode
-                    return { 
-                        nom: c[0], 
-                        barcode: c[1], 
-                        zone_principale: c[2].toUpperCase(), 
-                        zone_precision: c[3].toUpperCase(), 
-                        quantite: parseInt(c[4])||0, 
-                        seuil_critique: parseInt(c[5])||0, 
-                        categorie: c[6]||'PIECE'
-                    };
+                    if(c.length < 2 || !c[1]) return null;
+                    return { nom: c[0].toUpperCase(), barcode: c[1], zone_principale: c[2].toUpperCase(), zone_precision: c[3].toUpperCase(), quantite: parseInt(c[4])||0, seuil_critique: parseInt(c[5])||0, prix_unitaire: parseFloat(c[6])||0, categorie: c[7]||'PIECE', etat: c[8]||'OK' };
                 }).filter(x => x !== null);
-
-                // UPSERT basé sur le barcode qui est maintenant UNIQUE
                 const { error } = await sb.from('produits').upsert(items, { onConflict: 'barcode' });
-                if(error) alert("Erreur : " + error.message);
-                else { notify("IMPORT RÉUSSI"); chargerDonnees(); }
+                if(error) alert(error.message); else { notify("Import Réussi"); chargerDonnees(); }
             };
             reader.readAsText(file);
         }
 
+        async function traiterPhoto(input) {
+            const file = input.files[0]; if (!file) return;
+            document.getElementById('photo-preview').innerHTML = "⌛ COMPRESSION...";
+            const comp = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 800 });
+            const path = `img_${Date.now()}.webp`;
+            await sb.storage.from('photos-stock').upload(path, comp);
+            const { data } = sb.storage.from('photos-stock').getPublicUrl(path);
+            document.getElementById('photo-url').value = data.publicUrl;
+            document.getElementById('photo-preview').innerHTML = `<img src="${data.publicUrl}" class="w-full h-full object-cover">`;
+            notify("Photo Prête");
+        }
+
         async function sauvegarder() {
             const id = document.getElementById('edit-id').value;
+            const type = document.getElementById('edit-type').value;
             const payload = {
                 nom: document.getElementById('nom').value.toUpperCase(),
                 barcode: document.getElementById('barcode').value,
@@ -235,21 +333,41 @@
                 zone_precision: document.getElementById('zone-2').value.toUpperCase(),
                 quantite: parseInt(document.getElementById('qty').value) || 0,
                 seuil_critique: parseInt(document.getElementById('seuil').value) || 0,
+                prix_unitaire: parseFloat(document.getElementById('prix').value) || 0,
                 image_url: document.getElementById('photo-url').value,
-                categorie: document.getElementById('edit-type').value
+                categorie: type,
+                etat: type === 'MATERIEL' ? document.getElementById('etat-materiel').value : 'OK'
             };
             if(id) await sb.from('produits').update(payload).eq('id', id);
             else await sb.from('produits').insert([payload]);
-            toggleForm(); chargerDonnees(); notify("ENREGISTRÉ");
+            toggleForm(); chargerDonnees(); notify("Enregistré ✅");
         }
+
+        async function supprimerArticle() {
+            if(confirm("DÉTRUIRE CETTE FICHE DÉFINITIVEMENT ?")) {
+                await sb.from('produits').delete().eq('id', document.getElementById('edit-id').value);
+                toggleForm(); chargerDonnees(); notify("Supprimé 🗑️");
+            }
+        }
+
+        function showTab(t) {
+            document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + t).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-400'));
+            event.currentTarget.classList.replace('text-slate-400', 'text-blue-600');
+        }
+
+        function toggleForm() { document.getElementById('form-container').classList.toggle('hidden'); }
 
         function ouvrirForm(type, id = null) {
             document.querySelectorAll('#form-container input').forEach(i => i.value = "");
             document.getElementById('photo-preview').innerHTML = "📸";
             document.getElementById('edit-id').value = id || "";
             document.getElementById('edit-type').value = type;
+            document.getElementById('mat-fields').classList.toggle('hidden', type !== 'MATERIEL');
+            document.getElementById('btn-delete').classList.toggle('hidden', !id);
             if(id) chargerFiche(id);
-            document.getElementById('form-container').classList.remove('hidden');
+            toggleForm();
         }
 
         async function chargerFiche(id) {
@@ -260,30 +378,26 @@
             document.getElementById('zone-2').value = data.zone_precision || "";
             document.getElementById('qty').value = data.quantite;
             document.getElementById('seuil').value = data.seuil_critique;
+            document.getElementById('prix').value = data.prix_unitaire;
             document.getElementById('photo-url').value = data.image_url || "";
             if(data.image_url) document.getElementById('photo-preview').innerHTML = `<img src="${data.image_url}" class="w-full h-full object-cover">`;
         }
 
-        // Fonctions standards (Scanner, Tab, Stock...) identiques
-        function showTab(t) {
-            document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('tab-'+t).classList.add('active');
+        function toggleScanner() {
+            const c = document.getElementById('scanner-container');
+            if (c.classList.contains('hidden')) {
+                c.classList.remove('hidden'); 
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { toggleScanner(); traiterScan(txt); });
+            } else { c.classList.add('hidden'); if(html5QrCode) html5QrCode.stop(); }
         }
-        function toggleForm() { document.getElementById('form-container').classList.toggle('hidden'); }
-        async function updateStock(id, diff, nom) {
-            const { data } = await sb.from('produits').select('quantite').eq('id', id).single();
-            await sb.from('produits').update({ quantite: (data.quantite || 0) + diff }).eq('id', id);
-            chargerDonnees();
+
+        async function traiterScan(code) {
+            const { data } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
+            if(data) { notify("Article trouvé"); ouvrirForm(data.categorie, data.id); }
+            else { notify("Inconnu"); ouvrirForm('PIECE'); document.getElementById('barcode').value = code; }
         }
-        async function traiterPhoto(input) {
-            const file = input.files[0];
-            const comp = await imageCompression(file, { maxSizeMB: 0.1 });
-            const path = `img_${Date.now()}.webp`;
-            await sb.storage.from('photos-stock').upload(path, comp);
-            const { data } = sb.storage.from('photos-stock').getPublicUrl(path);
-            document.getElementById('photo-url').value = data.publicUrl;
-            document.getElementById('photo-preview').innerHTML = `<img src="${data.publicUrl}" class="w-full h-full object-cover">`;
-        }
+
         async function logout() { await sb.auth.signOut(); location.reload(); }
         checkUser();
     </script>
