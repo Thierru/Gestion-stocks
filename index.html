@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RTE EMASI V1.20 - Gestion Stock</title>
+<title>RTE EMASI V1.21 - Gestion Stock</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode" defer></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body { font-family: sans-serif; background: #f8fafc; }
@@ -37,7 +37,7 @@ body { font-family: sans-serif; background: #f8fafc; }
 <main id="main-app" class="hidden max-w-3xl mx-auto p-4 space-y-4">
 
 <header id="app-header" class="hidden flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-black text-slate-900">RTE <span class="text-blue-600">EMASI</span></h1>
+    <h1 class="text-2xl font-black text-slate-900">RTE <span class="text-blue-600">EMASI</span> <span class="text-sm font-normal">(V1.21)</span></h1>
     <button id="btn-logout" class="text-xs font-black bg-white px-4 py-2 rounded-full border shadow-sm">Déconnexion</button>
 </header>
 
@@ -91,7 +91,7 @@ body { font-family: sans-serif; background: #f8fafc; }
         </div>
         <div class="relative w-full h-48 bg-slate-100 rounded-3xl overflow-hidden flex items-center justify-center border">
             <div id="photo-preview" class="w-full h-full flex items-center justify-center">📸</div>
-            <input type="file" id="photo-input" capture="environment" accept="image/*" class="hidden">
+            <input type="file" id="photo-input" capture="environment" accept="image/*" class="hidden" onchange="traiterPhoto(this)">
             <button onclick="document.getElementById('photo-input').click()" class="absolute bottom-3 right-3 bg-blue-600 text-white px-4 py-2 rounded-full font-black text-xs">Photo</button>
         </div>
         <input type="hidden" id="edit-id">
@@ -120,9 +120,153 @@ body { font-family: sans-serif; background: #f8fafc; }
 </div>
 
 <script>
-// === Script complet V1.20 ===
-// Toutes fonctions login, checkUser, renderPieces, renderMateriel, updateStock, calculerBudget, historique, toggleForm, ouvrirForm, sauvegarder, supprimerArticle, gestion photo compressée
-// ... à compléter selon le même modèle V1.10 avec ajout sauvegarder(), supprimerArticle() avec confirmation, modification qty en ligne
-</script>
-</body>
-</html>
+// === V1.21 - Script complet ===
+const S_URL = "https://YOUR_PROJECT.supabase.co"; // Remplace par ton URL
+const S_KEY = "YOUR_PUBLIC_ANON_KEY"; // Remplace par ta clé
+const sb = supabase.createClient(S_URL, S_KEY);
+let userPseudo = "";
+let html5QrCode;
+
+// Notifications
+function notify(msg){
+    const b=document.getElementById('notifier');
+    document.getElementById('notify-msg').innerText = msg.toUpperCase();
+    b.style.display="block";
+    setTimeout(()=>b.style.display="none",2500);
+}
+
+// Login
+document.getElementById('btn-login').addEventListener('click', async ()=>{
+    const e=document.getElementById('pseudo').value;
+    const p=document.getElementById('password').value;
+    const {error}=await sb.auth.signInWithPassword({email:e.includes('@')?e:e+'@emasi.stock',password:p});
+    if(error) alert("Email ou mot de passe invalide"); else checkUser();
+});
+
+async function checkUser(){
+    const {data:{user}}=await sb.auth.getUser();
+    if(user){
+        userPseudo=user.email.split('@')[0].toUpperCase();
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('app-header').classList.remove('hidden');
+        chargerDonnees();
+    }
+}
+
+document.getElementById('btn-logout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
+
+// Tabs
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>showTab(btn.dataset.tab));
+});
+function showTab(t){
+    document.querySelectorAll('.tabs-content').forEach(c=>c.classList.remove('active'));
+    document.getElementById('tab-'+t).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.replace('text-blue-600','text-slate-400'));
+    event.currentTarget?.classList.replace('text-slate-400','text-blue-600');
+}
+
+// Charger données
+async function chargerDonnees(){
+    const {data,error}=await sb.from('produits').select('*').order('nom');
+    if(error){ console.error(error); return; }
+    render(data||[]);
+    calculerBudget(data||[]);
+    chargerHistorique();
+}
+
+// Render
+function render(data){
+    const s=document.getElementById('search').value.toLowerCase();
+    const pieces=data.filter(p=>p.categorie==='PIECE' && p.nom.toLowerCase().includes(s));
+    const materiel=data.filter(p=>p.categorie==='MATERIEL');
+    
+    // Pièces
+    document.getElementById('liste-pieces').innerHTML=pieces.map(p=>`
+        <div class="card-info ${p.quantite<= (p.seuil_critique||0)?'low-stock':''}">
+            <div class="flex gap-4">
+                <div class="w-20 h-20 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 border">
+                    ${p.image_url?`<img src="${p.image_url}" class="w-full h-full object-cover">`:'📦'}
+                </div>
+                <div class="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-black text-slate-800 text-sm truncate">${p.nom}</h3>
+                        <p class="text-xs text-blue-600">📍 ${p.zone_principale||''} - ${p.zone_precision||''}</p>
+                        <p class="text-[10px] font-mono text-slate-400">${p.barcode||'---'}</p>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black">-</button>
+                        <input type="number" value="${p.quantite||0}" min="0" onchange="updateStockInput('${p.id}', this.value)" class="w-12 text-center border rounded-lg">
+                        <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black text-blue-600">+</button>
+                        <button onclick="ouvrirForm('PIECE','${p.id}')" class="ml-1">⚙️</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Matériel
+    document.getElementById('liste-materiel').innerHTML=materiel.map(p=>`
+        <div class="card-info ${p.etat==='HS'?'low-stock':''} flex gap-4 items-center">
+            <div class="w-14 h-14 rounded-xl bg-slate-50 overflow-hidden border">
+                ${p.image_url?`<img src="${p.image_url}" class="w-full h-full object-cover">`:'🛠️'}
+            </div>
+            <div class="flex-1">
+                <h3 class="font-black text-[10px] uppercase">${p.nom}</h3>
+                <p class="text-[9px] text-slate-400">📍 ${p.zone_principale||'???'}</p>
+                <span class="text-[9px] font-black uppercase ${p.etat==='OK'?'text-emerald-600':'text-red-600'}">${p.etat||'OK'}</span>
+            </div>
+            <button onclick="ouvrirForm('MATERIEL','${p.id}')">⚙️</button>
+        </div>
+    `).join('');
+}
+
+// Update stock direct
+async function updateStock(id,diff,nom){
+    const {data}=await sb.from('produits').select('quantite').eq('id',id).single();
+    const n=Math.max((data.quantite||0)+diff,0);
+    await sb.from('produits').update({quantite:n}).eq('id',id);
+    await sb.from('historique').insert([{produit_nom:nom,utilisateur:userPseudo,action:diff>0?"ENTRÉE":"SORTIE",quantite_finale:n}]);
+    chargerDonnees();
+}
+
+// Update stock input direct
+async function updateStockInput(id,value){
+    const n=Math.max(parseInt(value)||0,0);
+    const {data}=await sb.from('produits').select('nom').eq('id',id).single();
+    await sb.from('produits').update({quantite:n}).eq('id',id);
+    await sb.from('historique').insert([{produit_nom:data.nom,utilisateur:userPseudo,action:"MODIF",quantite_finale:n}]);
+    chargerDonnees();
+}
+
+// Historique
+async function chargerHistorique(){
+    const {data}=await sb.from('historique').select('*').order('date_action',{ascending:false}).limit(20);
+    document.getElementById('liste-historique').innerHTML=(data||[]).map(l=>`
+        <div class="flex justify-between items-center text-xs font-black uppercase p-2 border-b">
+            <div><span class="text-slate-400 mr-2">${new Date(l.date_action).toLocaleTimeString()}</span>${l.produit_nom}</div>
+            <div class="${l.action==='ENTRÉE'?'text-emerald-600':'text-red-600'}">${l.action} (${l.quantite_finale})</div>
+        </div>
+    `).join('');
+}
+
+// Formulaire
+function toggleForm(){document.getElementById('form-container').classList.toggle('hidden');}
+function ouvrirForm(type,id=null){
+    document.getElementById('edit-id').value=id||"";
+    document.getElementById('edit-type').value=type;
+    if(id) chargerFiche(id);
+    toggleForm();
+}
+async function chargerFiche(id){
+    const {data}=await sb.from('produits').select('*').eq('id',id).single();
+    document.getElementById('nom').value=data.nom;
+    document.getElementById('barcode').value=data.barcode||"";
+    document.getElementById('zone-1').value=data.zone_principale||"";
+    document.getElementById('zone-2').value=data.zone_precision||"";
+    document.getElementById('qty').value=data.quantite;
+    document.getElementById('seuil').value=data.seuil_critique;
+    document.getElementById('prix').value=data.prix_unitaire;
+    document.getElementById('etat-materiel').value=data.etat||'OK';
+    if(data.image_url) document
