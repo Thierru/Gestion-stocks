@@ -15,10 +15,13 @@ body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e29
 .tabs { display:none; }
 .tabs.active { display:block; }
 .glass { background: rgba(255,255,255,0.95); backdrop-filter:blur(10px); }
+#scanner-container { display:none; position:fixed; inset:0; background:black; z-index:200; justify-content:center; align-items:center; flex-direction:column; }
+#photo-preview { width:100%; height:200px; background:#f0f0f0; display:flex; justify-content:center; align-items:center; }
 </style>
 </head>
 <body class="pb-20">
 
+<!-- LOGIN -->
 <div id="login-section" class="max-w-md mx-auto mt-20 p-6 bg-white rounded-2xl shadow-xl">
     <h1 class="text-center font-black text-xl mb-4">RTE EMASI - Connexion</h1>
     <input id="email" type="email" placeholder="E-mail" class="w-full p-3 rounded-xl border mb-3">
@@ -26,7 +29,9 @@ body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e29
     <button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold">Se connecter</button>
 </div>
 
+<!-- APP -->
 <div id="app" class="max-w-md mx-auto hidden mt-4">
+
     <!-- Navigation -->
     <nav class="flex justify-around mb-4 glass p-2 rounded-2xl shadow">
         <button onclick="showTab('pieces',event)" class="tab-btn text-blue-600">📦 Pièces</button>
@@ -37,8 +42,10 @@ body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e29
 
     <!-- Tabs -->
     <div id="tab-pieces" class="tabs active">
-        <h2 class="font-black mb-2">Gestion des Pièces</h2>
-        <input id="search-pieces" type="text" placeholder="Chercher article..." class="w-full p-2 mb-2 border rounded-xl" oninput="renderData()">
+        <div class="flex gap-2 mb-2">
+            <input id="search-pieces" type="text" placeholder="Chercher article..." class="flex-1 p-2 border rounded-xl" oninput="renderData()">
+            <button onclick="toggleScanner()" class="bg-blue-600 text-white px-3 rounded-xl">📷</button>
+        </div>
         <div id="pieces-list" class="space-y-2"></div>
     </div>
 
@@ -63,6 +70,23 @@ body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e29
     <button onclick="logout()" class="mt-4 bg-gray-800 text-white p-2 rounded-xl w-full">Déconnexion</button>
 </div>
 
+<!-- Scanner QR -->
+<div id="scanner-container" class="flex">
+    <div id="reader" class="w-full max-w-md"></div>
+    <button onclick="toggleScanner()" class="mt-4 bg-white text-black p-3 rounded-xl">Fermer</button>
+</div>
+
+<!-- Modal Photo -->
+<div id="photo-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50">
+    <div class="bg-white p-4 rounded-xl max-w-md w-full">
+        <h3 class="font-bold mb-2">Ajouter une photo</h3>
+        <div id="photo-preview">📸</div>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" onchange="uploadPhoto(this)">
+        <button onclick="document.getElementById('photo-input').click()" class="mt-2 bg-blue-600 text-white p-2 rounded-xl w-full">Choisir Photo</button>
+        <button onclick="closePhotoModal()" class="mt-2 bg-gray-500 text-white p-2 rounded-xl w-full">Fermer</button>
+    </div>
+</div>
+
 <script>
 const SUPA_URL = "https://lluihawrhoajckrgvakv.supabase.co";
 const SUPA_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
@@ -70,23 +94,26 @@ const supabase = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let currentUser = "";
 let allData = [];
+let html5QrCode = null;
+let currentScanCallback = null;
 
-async function login() {
-    const email = document.getElementById('email').value;
-    const pass = document.getElementById('password').value;
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+// LOGIN
+async function login(){
+    const email=document.getElementById('email').value;
+    const password=document.getElementById('password').value;
+    const { error } = await supabase.auth.signInWithPassword({email,password});
     if(error) return alert("Email ou mot de passe invalide");
     currentUser = email.split('@')[0].toUpperCase();
     document.getElementById('login-section').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     loadData();
 }
-
-async function logout() {
+async function logout(){
     await supabase.auth.signOut();
     location.reload();
 }
 
+// TABS
 function showTab(tab,event){
     document.querySelectorAll('.tabs').forEach(t=>t.classList.remove('active'));
     document.getElementById('tab-'+tab).classList.add('active');
@@ -94,20 +121,23 @@ function showTab(tab,event){
     if(event && event.currentTarget) event.currentTarget.classList.replace('text-gray-400','text-blue-600');
 }
 
+// LOAD DATA
 async function loadData(){
     const { data,error } = await supabase.from('produits').select('*').order('nom');
     if(error) return console.error(error);
-    allData = data || [];
+    allData = data||[];
     renderData();
     renderBudget();
 }
 
+// RENDER
 function renderData(){
     const search = document.getElementById('search-pieces')?.value.toLowerCase()||"";
     const pieces = allData.filter(p=>p.categorie==='PIECE' && p.nom.toLowerCase().includes(search));
     const materiel = allData.filter(p=>p.categorie==='MATERIEL');
 
-    const piecesHTML = pieces.map(p=>`
+    // Pièces
+    document.getElementById('pieces-list').innerHTML = pieces.map(p=>`
         <div class="card ${p.quantite<=p.seuil_critique?'low-stock':''}">
             <div class="flex justify-between items-center">
                 <div>
@@ -117,75 +147,77 @@ function renderData(){
                 <div class="flex gap-1">
                     <button onclick="updateStock('${p.id}',-1)" class="bg-gray-200 p-1 rounded">-</button>
                     <button onclick="updateStock('${p.id}',1)" class="bg-blue-500 text-white p-1 rounded">+</button>
+                    <button onclick="openPhotoModal('${p.id}')" class="ml-1">📸</button>
                 </div>
             </div>
         </div>
     `).join('');
-    document.getElementById('pieces-list').innerHTML = piecesHTML;
 
-    const materielHTML = materiel.map(p=>`
+    // Matériel
+    document.getElementById('materiel-list').innerHTML = materiel.map(p=>`
         <div class="card ${p.etat==='HS'?'low-stock':''}">
             <div class="flex justify-between items-center">
                 <div>
                     <p class="font-bold">${p.nom}</p>
                     <small>État: ${p.etat}</small>
                 </div>
+                <div class="flex gap-1">
+                    <button onclick="openPhotoModal('${p.id}')" class="ml-1">📸</button>
+                </div>
             </div>
         </div>
     `).join('');
-    document.getElementById('materiel-list').innerHTML = materielHTML;
 }
 
-async function updateStock(id, diff){
+// UPDATE STOCK
+async function updateStock(id,diff){
     const prod = allData.find(p=>p.id===id);
     if(!prod) return;
-    const newQty = (prod.quantite||0)+diff;
+    const newQty=(prod.quantite||0)+diff;
     if(newQty<0) return alert("Stock insuffisant");
     await supabase.from('produits').update({quantite:newQty}).eq('id',id);
-    await supabase.from('historique').insert([{produit_nom:prod.nom, utilisateur:currentUser, action: diff>0?"ENTRÉE":"SORTIE", quantite_finale:newQty}]);
+    await supabase.from('historique').insert([{produit_nom:prod.nom, utilisateur:currentUser, action:diff>0?"ENTRÉE":"SORTIE", quantite_finale:newQty}]);
     loadData();
 }
 
-// Budget
+// BUDGET
 function renderBudget(){
     let total=0;
-    const items = [];
+    const items=[];
     allData.forEach(p=>{
-        const manque = (p.seuil_critique||0)-(p.quantite||0);
+        const manque=(p.seuil_critique||0)-(p.quantite||0);
         if(manque>0 || p.etat==='HS'){
-            const q = p.etat==='HS'?1:manque;
-            const prix = q*(p.prix_unitaire||0);
+            const q=p.etat==='HS'?1:manque;
+            const prix=q*(p.prix_unitaire||0);
             total+=prix;
             if(prix>0) items.push(`<div class="card flex justify-between"><span>${p.nom} x${q}</span><span>${prix.toFixed(2)}€</span></div>`);
         }
     });
-    document.getElementById('budget-list').innerHTML = items.join('') || "<p>Aucun besoin</p>";
-    document.getElementById('budget-total').innerText = total.toFixed(2)+" €";
+    document.getElementById('budget-list').innerHTML=items.join('') || "<p>Aucun besoin</p>";
+    document.getElementById('budget-total').innerText=total.toFixed(2)+" €";
 }
 
-// CSV Export
+// CSV Export / Import
 function exportCSV(){
     const headers = ["Nom","Barcode","Zone","Precision","Quantite","Seuil","Prix","Categorie","Etat"];
-    let csv = headers.join(";")+"\n";
+    let csv=headers.join(";")+"\n";
     allData.forEach(p=>{
         csv+=`${p.nom};${p.barcode||""};${p.zone_principale||""};${p.zone_precision||""};${p.quantite};${p.seuil_critique};${p.prix_unitaire||0};${p.categorie};${p.etat||"OK"}\n`;
     });
-    const blob = new Blob([csv], {type:"text/csv"});
+    const blob=new Blob([csv],{type:"text/csv"});
     const link=document.createElement("a");
     link.href=URL.createObjectURL(blob);
     link.download="inventaire.csv";
     link.click();
 }
-
-// CSV Import
 function importCSV(){
-    const file = document.getElementById('csv-file').files[0];
+    const file=document.getElementById('csv-file').files[0];
     if(!file) return alert("Choisir un fichier CSV");
-    const reader = new FileReader();
+    const reader=new FileReader();
     reader.onload=async e=>{
-        const lines = e.target.result.split("\n").slice(1).filter(l=>l.trim().length>0);
-        const items = lines.map(l=>{
-            const c = l.split(";").map(x=>x.replace(/"/g,'').trim());
+        const lines=e.target.result.split("\n").slice(1).filter(l=>l.trim().length>0);
+        const items=lines.map(l=>{
+            const c=l.split(";").map(x=>x.replace(/"/g,'').trim());
             if(c.length<2) return null;
             return {
                 nom:c[0].toUpperCase(),
@@ -199,14 +231,60 @@ function importCSV(){
                 etat:c[8]||'OK'
             };
         }).filter(x=>x!==null);
-        // éviter doublons
-        const unique = Array.from(new Map(items.map(i=>[i.barcode,i])).values());
+        const unique=Array.from(new Map(items.map(i=>[i.barcode,i])).values());
         const { error } = await supabase.from('produits').upsert(unique,{onConflict:'barcode'});
         if(error) return alert("Erreur import: "+error.message);
         alert("Import terminé");
         loadData();
     };
     reader.readAsText(file);
+}
+
+// SCANNER
+function toggleScanner(){
+    const c=document.getElementById('scanner-container');
+    if(c.style.display==="flex"){
+        c.style.display="none"; if(html5QrCode) html5QrCode.stop();
+    }else{
+        c.style.display="flex";
+        html5QrCode=new Html5Qrcode("reader");
+        html5QrCode.start({facingMode:"environment"},{fps:10, qrbox:250},txt=>{
+            c.style.display="none";
+            if(html5QrCode) html5QrCode.stop();
+            handleScan(txt);
+        });
+    }
+}
+function handleScan(code){
+    const p=allData.find(x=>x.barcode===code);
+    if(p){
+        alert("Article trouvé: "+p.nom);
+        openPhotoModal(p.id);
+    }else{
+        alert("Article inconnu: "+code);
+    }
+}
+
+// PHOTO MODAL
+let currentPhotoID=null;
+function openPhotoModal(id){
+    currentPhotoID=id;
+    document.getElementById('photo-preview').innerHTML="📸";
+    document.getElementById('photo-modal').classList.remove('hidden');
+}
+function closePhotoModal(){
+    document.getElementById('photo-modal').classList.add('hidden');
+}
+async function uploadPhoto(input){
+    const file=input.files[0]; if(!file) return;
+    document.getElementById('photo-preview').innerText="⏳";
+    const compressed = await imageCompression(file,{maxSizeMB:0.1});
+    const path=`img_${Date.now()}.webp`;
+    await supabase.storage.from('photos-stock').upload(path,compressed,{upsert:true});
+    const { data } = supabase.storage.from('photos-stock').getPublicUrl(path);
+    await supabase.from('produits').update({image_url:data.publicUrl}).eq('id',currentPhotoID);
+    document.getElementById('photo-preview').innerHTML=`<img src="${data.publicUrl}" class="w-full h-full object-cover">`;
+    loadData();
 }
 </script>
 </body>
