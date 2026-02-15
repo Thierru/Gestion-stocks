@@ -168,4 +168,135 @@
             const liste = document.getElementById('liste-produits');
             liste.innerHTML = data.map(p => `
                 <div class="bg-white p-4 rounded-[1.5rem] shadow-sm flex items-center gap-4 border border-slate-100 ${p.quantite <= p.seuil_critique ? 'low-stock' : ''}">
-                    <img src="${p.image_url || 'https://via.placeholder.com/100?text=EMASI'}" class="w-20 h-20 rounded-2xl object-cover
+                    <img src="${p.image_url || 'https://via.placeholder.com/100?text=EMASI'}" class="w-20 h-20 rounded-2xl object-cover bg-slate-50">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-black text-slate-800 truncate pr-2 text-sm uppercase">${p.nom}</h3>
+                            <button onclick="preparerEdition('${p.id}')" class="text-blue-500 font-black text-[9px] uppercase tracking-wider border border-blue-100 px-2 py-1 rounded-md">Éditer</button>
+                        </div>
+                        <div class="text-[9px] text-slate-400 font-bold uppercase flex flex-wrap gap-x-3 gap-y-1 mt-1">
+                            <span>📍 ${p.emplacement || 'Non défini'}</span>
+                            <span>💰 ${p.prix_unitaire ? p.prix_unitaire.toFixed(2) : '0.00'}€</span>
+                            <span>🚨 Seuil: ${p.seuil_critique || '0'}</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-3">
+                            <div class="flex gap-2">
+                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black text-lg active:bg-blue-600 active:text-white transition-colors">-</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black text-lg active:bg-blue-600 active:text-white transition-colors">+</button>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-xs font-black text-slate-300 uppercase leading-none">Stock</span>
+                                <span class="text-2xl font-black ${p.quantite <= p.seuil_critique ? 'text-red-600' : 'text-slate-800'}">${p.quantite}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateQty(id, newQty, nom) {
+            if(newQty < 0) return;
+            await sb.from('produits').update({ quantite: newQty }).eq('id', id);
+            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: 'MODIF', quantite_modifiee: newQty }]);
+            chargerProduits();
+        }
+
+        async function preparerEdition(id) {
+            const { data } = await sb.from('produits').select('*').eq('id', id).single();
+            document.getElementById('edit-id').value = data.id;
+            document.getElementById('nom').value = data.nom;
+            document.getElementById('emplacement').value = data.emplacement;
+            document.getElementById('qty').value = data.quantite;
+            document.getElementById('prix').value = data.prix_unitaire;
+            document.getElementById('seuil').value = data.seuil_critique;
+            toggleForm();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function ajouterOuModifier() {
+            const id = document.getElementById('edit-id').value;
+            const obj = {
+                nom: document.getElementById('nom').value,
+                emplacement: document.getElementById('emplacement').value,
+                quantite: parseInt(document.getElementById('qty').value),
+                prix_unitaire: parseFloat(document.getElementById('prix').value) || 0,
+                seuil_critique: parseInt(document.getElementById('seuil').value) || 0
+            };
+
+            const photoFile = document.getElementById('photo-file').files[0];
+            if (photoFile) {
+                const fileName = `${Date.now()}_${photoFile.name}`;
+                await sb.storage.from('photos-stock').upload(fileName, photoFile);
+                const { data: urlData } = sb.storage.from('photos-stock').getPublicUrl(fileName);
+                obj.image_url = urlData.publicUrl;
+            }
+
+            if(id) {
+                await sb.from('produits').update(obj).eq('id', id);
+                alert("Mise à jour réussie !");
+            } else {
+                await sb.from('produits').insert([obj]);
+                alert("Nouvel article enregistré !");
+            }
+            toggleForm();
+            chargerProduits();
+        }
+
+        function resetForm() {
+            document.getElementById('edit-id').value = "";
+            document.getElementById('nom').value = "";
+            document.getElementById('emplacement').value = "";
+            document.getElementById('qty').value = "";
+            document.getElementById('prix').value = "";
+            document.getElementById('seuil').value = "";
+        }
+
+        async function calculerAchats() {
+            const { data } = await sb.from('produits').select('*');
+            const alertes = data.filter(p => p.quantite <= p.seuil_critique);
+            let total = 0;
+            const liste = document.getElementById('liste-achats');
+            
+            liste.innerHTML = alertes.map(p => {
+                const aCommander = (p.seuil_critique + 5) - p.quantite;
+                const cout = aCommander * p.prix_unitaire;
+                total += cout;
+                return `
+                    <div class="bg-white p-5 rounded-3xl border-l-[10px] border-red-500 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="font-black text-slate-800 uppercase text-xs">${p.nom}</span>
+                            <span class="bg-red-50 text-red-600 px-3 py-1 rounded-full font-black text-[10px]">MANQUE: ${aCommander}</span>
+                        </div>
+                        <div class="flex justify-between items-end mt-4">
+                            <p class="text-[9px] text-slate-400 font-bold uppercase italic">Coût estimé: ${cout.toFixed(2)} €</p>
+                            <p class="text-[9px] text-slate-500 font-black">Stock actuel: ${p.quantite}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
+        }
+
+        function envoyerRapportMail() {
+            const budget = document.getElementById('total-budget').innerText;
+            const mailto = `mailto:thierry.p057@gmail.com?subject=🚨 Rapport Stock EMASI&body=Budget réapprovisionnement estimé : ${budget}.%0D%0A%0D%0AVeuillez consulter l'application pour la liste complète.`;
+            window.location.href = mailto;
+        }
+
+        async function chargerLogs() {
+            const { data } = await sb.from('historique').select('*').order('date_action', { ascending: false }).limit(25);
+            document.getElementById('liste-logs').innerHTML = data.map(l => `
+                <div class="p-4 flex justify-between items-center">
+                    <div class="min-w-0">
+                        <span class="font-black text-blue-600 text-[10px] uppercase mr-2">${l.utilisateur}</span>
+                        <span class="text-slate-800 font-bold text-xs">${l.produit_nom}</span>
+                    </div>
+                    <div class="text-[9px] text-slate-300 font-bold ml-4">${new Date(l.date_action).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                </div>
+            `).join('');
+        }
+
+        checkUser();
+    </script>
+</body>
+</html>
