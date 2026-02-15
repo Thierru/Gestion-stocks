@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Stock Privé</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-5">
+    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-2xl font-bold mb-4 text-center">📦 Gestion Stock</h1>
+        
+        <div id="login-section">
+            <input id="email" type="email" placeholder="Email" class="w-full border p-2 mb-2 rounded">
+            <input id="password" type="password" placeholder="Mot de passe" class="w-full border p-2 mb-4 rounded">
+            <button onclick="login()" class="w-full bg-blue-600 text-white p-2 rounded">Se connecter</button>
+        </div>
+
+        <div id="stock-section" class="hidden">
+            <div class="mb-6 border-b pb-4">
+                <input id="nom" type="text" placeholder="Nom article" class="w-full border p-2 mb-2 rounded">
+                <input id="qty" type="number" placeholder="Quantité" class="w-full border p-2 mb-2 rounded">
+                <button onclick="ajouterArticle()" class="w-full bg-green-500 text-white p-2 rounded">+ Ajouter</button>
+            </div>
+            <ul id="liste-produits" class="space-y-2"></ul>
+            <button onclick="logout()" class="mt-4 text-red-500 text-sm">Déconnexion</button>
+        </div>
+    </div>
+
+    <script>
+        const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
+        const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
+        const supabase = supabase.createClient(S_URL, S_KEY);
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) alert("Erreur: " + error.message);
+            else checkUser();
+        }
+
+        async function checkUser() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('stock-section').classList.remove('hidden');
+                chargerProduits();
+            }
+        }
+
+        async function chargerProduits() {
+            const { data } = await supabase.from('produits').select('*');
+            const liste = document.getElementById('liste-produits');
+            liste.innerHTML = data.map(p => `
+                <li class="flex justify-between border-b py-2">
+                    <span>${p.nom}</span>
+                    <span class="font-bold">x${p.quantite}</span>
+                </li>
+            `).join('');
+        }
+
+        async function ajouterArticle() {
+            const nom = document.getElementById('nom').value;
+            const quantite = document.getElementById('qty').value;
+            await supabase.from('produits').insert([{ nom, quantite }]);
+            chargerProduits();
+        }
+
+        checkUser(); // Vérifie si on est déjà connecté au chargement
+    </script>
+</body>
+</html>
