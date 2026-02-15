@@ -2,124 +2,147 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE EMASI LORRAINE - V4.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RTE EMASI V1.0 FINAL</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .tabs-content { display: none; }
-        .tabs-content.active { display: block; }
-        .low-stock { border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; }
-        .status-hs { border: 2px solid #991b1b !important; background-color: #fef2f2 !important; }
-        #reader { width: 100%; border-radius: 24px; overflow: hidden; }
-        label { font-size: 0.7rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 2px; display: block; }
-        .btn-scan-main { position: fixed; bottom: 100px; right: 20px; z-index: 40; }
+        .tabs-content.active { display: block; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .low-stock { border: 2px solid #f87171 !important; background: #fef2f2; }
+        .status-hs { border: 2px solid #7f1d1d !important; background: #fff1f2; }
+        #reader { width: 100%; border-radius: 24px; overflow: hidden; background: black; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-32 font-sans text-slate-900">
+<body class="bg-slate-100 min-h-screen pb-32">
     <div id="app" class="max-w-xl mx-auto p-4">
         
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-xl font-black text-blue-900 italic uppercase leading-none">
-                RTE <span class="text-blue-500">EMASI</span> <br>
-                <span class="text-[10px] tracking-widest text-slate-400 not-italic">LORRAINE</span>
-            </h1>
-            <button onclick="logout()" id="btn-logout" class="hidden text-[10px] bg-white px-3 py-2 rounded-xl shadow-sm font-bold border border-slate-100 uppercase">Quitter</button>
-        </div>
+        <header class="flex justify-between items-center mb-6 px-2">
+            <div>
+                <h1 class="text-2xl font-black text-blue-900 leading-none">RTE <span class="text-blue-500">EMASI</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-[0.3em] uppercase">Lorraine • V1 Finale</p>
+            </div>
+            <button onclick="logout()" id="btn-logout" class="hidden glass text-[10px] px-4 py-2 rounded-full font-black border border-slate-200 uppercase shadow-sm">Déconnexion</button>
+        </header>
 
-        <button onclick="toggleScanner()" class="btn-scan-main bg-blue-600 text-white w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-2xl border-4 border-white">📷</button>
-
-        <div id="login-section" class="bg-white p-8 rounded-[2.5rem] shadow-xl border mt-10">
-            <h2 class="text-center font-black text-slate-300 mb-8 uppercase tracking-widest text-xs">Accès Inventaire</h2>
+        <div id="login-section" class="bg-white p-8 rounded-[3rem] shadow-2xl border border-slate-100 mt-10">
+            <div class="text-center mb-8">
+                <span class="text-4xl">🔐</span>
+                <h2 class="font-black text-slate-800 uppercase mt-4">Accès Inventaire</h2>
+            </div>
             <div class="space-y-4">
-                <input id="pseudo" type="text" placeholder="Identifiant" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
-                <input id="password" type="password" placeholder="Code Secret" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
-                <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-5 rounded-2xl shadow-lg uppercase tracking-widest">Se connecter</button>
+                <input id="pseudo" type="text" placeholder="Identifiant" class="w-full border-0 bg-slate-100 p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+                <input id="password" type="password" placeholder="Code Secret" class="w-full border-0 bg-slate-100 p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+                <button onclick="login()" class="w-full bg-blue-600 text-white font-black p-5 rounded-2xl shadow-lg uppercase tracking-widest active:scale-95 transition-transform">Se connecter</button>
             </div>
         </div>
 
-        <div id="main-app" class="hidden space-y-4">
-            <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50 shadow-lg">
-                <button onclick="showTab('pieces')" class="flex flex-col items-center p-2 tab-btn active text-blue-600">📦<span class="text-[9px] font-black mt-1 uppercase">Pièces</span></button>
-                <button onclick="showTab('materiel')" class="flex flex-col items-center p-2 tab-btn text-slate-300">🛠️<span class="text-[9px] font-black mt-1 uppercase">Matériel</span></button>
-                <button onclick="showTab('achats')" class="flex flex-col items-center p-2 tab-btn text-slate-300">🛒<span class="text-[9px] font-black mt-1 uppercase">Budget</span></button>
-                <button onclick="showTab('logs')" class="flex flex-col items-center p-2 tab-btn text-slate-300">📜<span class="text-[9px] font-black mt-1 uppercase">Logs</span></button>
+        <main id="main-app" class="hidden space-y-4">
+            
+            <nav class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg glass border border-white/50 rounded-[2.5rem] flex justify-around p-3 z-50 shadow-2xl">
+                <button onclick="showTab('pieces')" class="tab-btn active text-blue-600 flex flex-col items-center">
+                    <span class="text-xl">📦</span><span class="text-[9px] font-black uppercase mt-1">Pièces</span>
+                </button>
+                <button onclick="showTab('materiel')" class="tab-btn text-slate-400 flex flex-col items-center">
+                    <span class="text-xl">🛠️</span><span class="text-[9px] font-black uppercase mt-1">Matériel</span>
+                </button>
+                <button onclick="showTab('achats')" class="tab-btn text-slate-400 flex flex-col items-center">
+                    <span class="text-xl">🛒</span><span class="text-[9px] font-black uppercase mt-1">Budget</span>
+                </button>
+                <button onclick="showTab('logs')" class="tab-btn text-slate-400 flex flex-col items-center">
+                    <span class="text-xl">📜</span><span class="text-[9px] font-black uppercase mt-1">Logs</span>
+                </button>
             </nav>
 
-            <div id="scanner-container" class="hidden fixed inset-0 bg-black/90 z-[200] flex flex-col p-6">
-                <div class="flex justify-between items-center mb-6 text-white text-xs font-bold uppercase"><span>Scanner Code</span><button onclick="toggleScanner()" class="text-2xl">✕</button></div>
-                <div id="reader" class="bg-white rounded-3xl overflow-hidden"></div>
+            <div id="scanner-container" class="hidden fixed inset-0 bg-black/95 z-[200] flex flex-col p-6 items-center justify-center">
+                <div id="reader" class="w-full"></div>
+                <button onclick="toggleScanner()" class="mt-10 bg-white/10 text-white px-8 py-4 rounded-full font-black uppercase text-xs">Fermer</button>
             </div>
 
-            <div id="tab-pieces" class="tabs-content active space-y-4">
-                <input id="search" oninput="chargerDonnees()" type="text" placeholder="Chercher une pièce..." class="w-full border p-5 rounded-3xl shadow-sm outline-none bg-white font-bold">
-                <button onclick="ouvrirForm('PIECE')" class="w-full bg-blue-50 text-blue-700 p-5 rounded-3xl font-black text-xs uppercase border border-blue-100">+ Nouvelle Pièce</button>
+            <section id="tab-pieces" class="tabs-content active space-y-4">
+                <div class="flex gap-2">
+                    <input id="search" oninput="chargerDonnees()" type="text" placeholder="Rechercher une pièce..." class="flex-1 glass border-white border p-5 rounded-3xl shadow-sm outline-none font-bold">
+                    <button onclick="toggleScanner()" class="bg-blue-600 text-white w-16 rounded-3xl shadow-lg flex items-center justify-center text-xl">📷</button>
+                </div>
+                <button onclick="ouvrirForm('PIECE')" class="w-full bg-white text-blue-600 p-4 rounded-3xl font-black text-[10px] uppercase shadow-sm border border-blue-50">+ Ajouter une pièce de rechange</button>
                 <div id="liste-pieces" class="grid gap-3"></div>
-            </div>
+            </section>
 
-            <div id="tab-materiel" class="tabs-content space-y-4">
-                <input id="search-mat" oninput="chargerDonnees()" type="text" placeholder="Chercher un appareil..." class="w-full border p-5 rounded-3xl shadow-sm outline-none bg-white font-bold">
-                <button onclick="ouvrirForm('MATERIEL')" class="w-full bg-slate-800 text-white p-5 rounded-3xl font-black text-xs uppercase">+ Nouvel Matériel</button>
+            <section id="tab-materiel" class="tabs-content space-y-4">
+                <div class="flex gap-2">
+                    <input id="search-mat" oninput="chargerDonnees()" type="text" placeholder="Rechercher un appareil..." class="flex-1 glass border-white border p-5 rounded-3xl shadow-sm outline-none font-bold">
+                    <button onclick="toggleScanner()" class="bg-slate-800 text-white w-16 rounded-3xl shadow-lg flex items-center justify-center text-xl">📷</button>
+                </div>
+                <button onclick="ouvrirForm('MATERIEL')" class="w-full bg-slate-800 text-white p-4 rounded-3xl font-black text-[10px] uppercase shadow-lg">+ Ajouter un outil ou appareil</button>
                 <div id="liste-materiel" class="grid gap-3"></div>
-            </div>
+            </section>
 
             <div id="form-container" class="hidden fixed inset-0 bg-white z-[100] p-6 overflow-y-auto">
-                <div class="max-w-xl mx-auto space-y-4 pb-24">
-                    <div class="flex justify-between items-center">
-                        <h2 id="form-title" class="text-xl font-black text-blue-600 uppercase">Fiche Article</h2>
-                        <button onclick="toggleForm()" class="text-slate-400 font-bold uppercase text-[10px]">Annuler ✕</button>
-                    </div>
+                <div class="max-w-xl mx-auto space-y-5 pb-28">
+                    <header class="flex justify-between items-center">
+                        <h2 id="form-title" class="text-xl font-black text-blue-900 uppercase italic">Fiche Article</h2>
+                        <button onclick="toggleForm()" class="bg-slate-100 w-10 h-10 rounded-full font-bold">✕</button>
+                    </header>
 
-                    <div class="bg-slate-100 p-6 rounded-[2.5rem] flex flex-col items-center gap-4 border-2 border-dashed border-slate-200">
-                        <div id="photo-preview" class="w-32 h-32 rounded-3xl bg-white border-4 border-white shadow-lg overflow-hidden flex items-center justify-center">
-                            <span class="text-[10px] text-slate-300 font-black uppercase">Pas de photo</span>
+                    <div class="bg-slate-50 p-6 rounded-[2.5rem] flex flex-col items-center gap-4 border-2 border-dashed border-slate-200">
+                        <div id="photo-preview" class="w-40 h-40 rounded-[2rem] bg-white shadow-inner overflow-hidden flex items-center justify-center border-4 border-white">
+                            <span class="text-[10px] text-slate-300 font-black uppercase">Pas d'image</span>
                         </div>
                         <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" onchange="traiterEtUploaderPhoto(this)">
-                        <button onclick="document.getElementById('photo-input').click()" class="bg-blue-600 text-white px-6 py-2 rounded-full font-black text-[10px] uppercase shadow-md">Prendre Photo</button>
+                        <button onclick="document.getElementById('photo-input').click()" class="bg-blue-600 text-white px-8 py-3 rounded-full font-black text-[10px] uppercase shadow-lg">Prendre une photo</button>
                         <input type="hidden" id="photo-url">
                     </div>
 
                     <input id="edit-id" type="hidden">
                     <input id="edit-type" type="hidden">
-                    <div><label>Désignation</label><input id="nom" type="text" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none font-bold"></div>
-                    <div><label>Code Barre / QR</label><input id="barcode" type="text" class="w-full border p-4 rounded-2xl bg-slate-50 font-mono text-blue-600 outline-none"></div>
                     
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label>Zone</label><select id="zone-1" class="w-full border p-4 rounded-2xl bg-slate-50 font-bold"><option value="LABO">LABO</option><option value="ATELIER">ATELIER</option><option value="BUREAU">BUREAU</option></select></div>
-                        <div><label>Précision</label><input id="zone-2" type="text" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none"></div>
-                    </div>
+                    <div class="space-y-4">
+                        <div><label>Désignation</label><input id="nom" type="text" class="w-full bg-slate-50 p-4 rounded-2xl outline-none font-bold border-0 focus:ring-2 focus:ring-blue-500"></div>
+                        <div><label>Code Unique (QR/Barre)</label><input id="barcode" type="text" class="w-full bg-slate-50 p-4 rounded-2xl outline-none font-mono text-blue-600 border-0 focus:ring-2 focus:ring-blue-500"></div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label>Zone principale</label><select id="zone-1" class="w-full bg-slate-50 p-4 rounded-2xl font-bold border-0"><option value="LABO">LABO</option><option value="ATELIER">ATELIER</option><option value="BUREAU">BUREAU</option></select></div>
+                            <div><label>Précision</label><input id="zone-2" type="text" placeholder="Ex: Armoire 3" class="w-full bg-slate-50 p-4 rounded-2xl outline-none border-0"></div>
+                        </div>
 
-                    <div id="fields-piece" class="grid grid-cols-2 gap-3">
-                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none font-bold"></div>
-                        <div><label>Seuil Alerte</label><input id="seuil" type="number" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none font-bold"></div>
-                    </div>
+                        <div id="fields-piece" class="grid grid-cols-2 gap-3">
+                            <div><label>Quantité</label><input id="qty" type="number" class="w-full bg-slate-50 p-4 rounded-2xl font-black border-0"></div>
+                            <div><label>Seuil Alerte</label><input id="seuil" type="number" class="w-full bg-slate-50 p-4 rounded-2xl font-black border-0"></div>
+                        </div>
 
-                    <div id="fields-materiel" class="hidden">
-                        <label>État de fonctionnement</label>
-                        <select id="etat-materiel" class="w-full border p-4 rounded-2xl bg-slate-50 font-black outline-none"><option value="OK">✅ OPÉRATIONNEL</option><option value="HS">❌ HS (À REMPLACER)</option><option value="CO">⏳ EN ÉTALONNAGE</option></select>
-                    </div>
+                        <div id="fields-materiel" class="hidden">
+                            <label>État de santé</label>
+                            <select id="etat-materiel" class="w-full bg-slate-50 p-4 rounded-2xl font-black border-0"><option value="OK">✅ OPÉRATIONNEL</option><option value="HS">❌ HS (À REMPLACER)</option><option value="CO">⏳ EN ÉTALONNAGE</option></select>
+                        </div>
 
-                    <div><label>Prix Unitaire HT (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-4 rounded-2xl bg-slate-50 outline-none font-bold"></div>
+                        <div><label>Prix unitaire estimé (€)</label><input id="prix" type="number" step="0.01" class="w-full bg-slate-50 p-4 rounded-2xl font-black border-0"></div>
+                    </div>
                     
-                    <button onclick="sauvegarder()" id="btn-save" class="w-full bg-blue-600 text-white p-5 rounded-3xl font-black uppercase shadow-xl italic tracking-widest">Enregistrer Article</button>
-                    <button id="btn-delete" onclick="supprimerArticle()" class="w-full text-red-500 font-bold text-[10px] uppercase pt-4 hidden tracking-widest">Supprimer l'article de la base</button>
+                    <button onclick="sauvegarder()" id="btn-save" class="w-full bg-blue-600 text-white p-6 rounded-3xl font-black uppercase shadow-xl active:scale-95 transition-transform tracking-[0.2em]">Enregistrer la fiche</button>
+                    <button id="btn-delete" onclick="supprimerArticle()" class="w-full text-red-500 font-bold text-[10px] uppercase pt-4 hidden">Supprimer de l'inventaire</button>
                 </div>
             </div>
 
-            <div id="tab-achats" class="tabs-content space-y-4">
-                <div class="bg-blue-900 p-8 rounded-[2.5rem] text-white text-center shadow-xl">
-                    <p class="text-[10px] uppercase font-black opacity-60 tracking-[0.2em]">Estimation Budget Thierry</p>
-                    <h2 id="total-budget" class="text-4xl font-black mt-1">0.00 €</h2>
+            <section id="tab-achats" class="tabs-content space-y-4">
+                <div class="bg-blue-900 p-10 rounded-[3rem] text-white text-center shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 text-6xl">💶</div>
+                    <p class="text-[10px] uppercase font-black opacity-50 tracking-widest">Budget réapprovisionnement</p>
+                    <h2 id="total-budget" class="text-5xl font-black mt-2">0.00 €</h2>
                 </div>
                 <div id="liste-achats" class="grid gap-3"></div>
-            </div>
+            </section>
 
-            <div id="tab-logs" class="tabs-content space-y-4">
-                <div id="liste-logs" class="bg-white rounded-2xl border divide-y overflow-hidden shadow-sm"></div>
-            </div>
-        </div>
+            <section id="tab-logs" class="tabs-content space-y-4">
+                <div id="liste-logs" class="bg-white rounded-[2rem] border border-slate-100 divide-y overflow-hidden shadow-sm"></div>
+            </section>
+
+        </main>
     </div>
 
     <script>
@@ -131,51 +154,49 @@
 
         function notifier(msg, success = true) {
             const t = document.createElement('div');
-            t.className = `fixed top-10 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-[10px] font-black z-[300] shadow-2xl transition-all duration-500 ${success ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'}`;
+            t.className = `fixed top-6 left-1/2 -translate-x-1/2 px-8 py-4 rounded-full text-[10px] font-black z-[300] shadow-2xl transition-all duration-500 glass border ${success ? 'text-emerald-600 border-emerald-100' : 'text-blue-600 border-blue-100'}`;
             t.innerHTML = msg.toUpperCase(); document.body.appendChild(t);
-            setTimeout(() => { t.classList.add('opacity-0', '-translate-y-5'); setTimeout(() => t.remove(), 500); }, 2500);
+            setTimeout(() => { t.classList.add('opacity-0', '-translate-y-2'); setTimeout(() => t.remove(), 500); }, 2000);
         }
 
         async function login() {
             const p = document.getElementById('pseudo').value;
             const pw = document.getElementById('password').value;
-            const { error } = await sb.auth.signInWithPassword({ email: p.toLowerCase() + "@emasi.stock", password: pw });
-            if (error) alert("Erreur accès."); else checkUser();
+            if(!p || !pw) return alert("Remplir les champs");
+            const { error } = await sb.auth.signInWithPassword({ email: p.toLowerCase().trim() + "@emasi.stock", password: pw });
+            if (error) alert("Identifiants incorrects."); else checkUser();
         }
+
         async function logout() { await sb.auth.signOut(); location.reload(); }
+
         async function checkUser() {
             const { data: { user } } = await sb.auth.getUser();
             if (user) {
                 userPseudo = user.email.split('@')[0].toUpperCase();
-                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('login-section').style.display = 'none';
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('btn-logout').classList.remove('hidden');
                 chargerDonnees();
             }
         }
 
-        // --- GESTION PHOTO + NETTOYAGE STORAGE ---
+        // --- GESTION PHOTO OPTIMISÉE ---
         async function traiterEtUploaderPhoto(input) {
-            const file = input.files[0];
-            if (!file) return;
+            const file = input.files[0]; if (!file) return;
             const preview = document.getElementById('photo-preview');
             const saveBtn = document.getElementById('btn-save');
             const oldUrl = document.getElementById('photo-url').value;
             
-            preview.innerHTML = `<div class="animate-spin text-2xl text-blue-600">⏳</div>`;
-            saveBtn.disabled = true; saveBtn.innerText = "Traitement...";
+            preview.innerHTML = `<div class="animate-bounce text-blue-600 font-black">...</div>`;
+            saveBtn.disabled = true;
 
             try {
-                // Nettoyage ancien fichier
                 if (oldUrl && oldUrl.includes('photos-stock')) {
                     const name = oldUrl.split('/').pop();
                     await sb.storage.from('photos-stock').remove([name]);
                 }
 
-                // Compression
-                const compressed = await imageCompression(file, { maxSizeMB: 0.15, maxWidthOrHeight: 1024, useWebWorker: true, fileType: 'image/webp' });
-                
-                // Upload
+                const compressed = await imageCompression(file, { maxSizeMB: 0.1, maxWidthOrHeight: 1024, useWebWorker: true, fileType: 'image/webp' });
                 const newName = `art_${Date.now()}.webp`;
                 const { error } = await sb.storage.from('photos-stock').upload(newName, compressed);
                 if (error) throw error;
@@ -183,14 +204,15 @@
                 const { data: urlData } = sb.storage.from('photos-stock').getPublicUrl(newName);
                 document.getElementById('photo-url').value = urlData.publicUrl;
                 preview.innerHTML = `<img src="${urlData.publicUrl}" class="w-full h-full object-cover">`;
-                notifier("Photo optimisée");
-            } catch (err) { console.error(err); notifier("Erreur Photo", false); }
-            finally { saveBtn.disabled = false; saveBtn.innerText = "Enregistrer Article"; }
+                notifier("Photo prête");
+            } catch (err) { notifier("Erreur Photo", false); }
+            finally { saveBtn.disabled = false; }
         }
 
-        // --- ACTIONS DONNEES ---
+        // --- DATA ---
         async function chargerDonnees() {
-            const { data } = await sb.from('produits').select('*').order('nom');
+            const { data, error } = await sb.from('produits').select('*').order('nom');
+            if(error) return console.error(error);
             renderListes(data);
             calculerBudget(data);
         }
@@ -203,35 +225,35 @@
             const materiel = data.filter(p => p.categorie === 'MATERIEL' && p.nom.toLowerCase().includes(s2));
 
             document.getElementById('liste-pieces').innerHTML = pieces.map(p => `
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm border flex gap-4 items-center ${p.quantite <= p.seuil_critique ? 'low-stock' : 'border-slate-100'}">
-                    <div class="w-14 h-14 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 border border-slate-100 flex items-center justify-center">
-                        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<span class="text-xs">📦</span>`}
+                <div class="bg-white p-4 rounded-[2.5rem] shadow-sm flex gap-4 items-center border border-white ${p.quantite <= p.seuil_critique ? 'low-stock' : ''}">
+                    <div class="w-16 h-16 rounded-[1.5rem] bg-slate-50 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100">
+                        ${p.image_url ? `<img src="${p.image_url}" loading="lazy" class="w-full h-full object-cover">` : `<span class="text-xl">📦</span>`}
                     </div>
                     <div class="flex-1 min-w-0">
                         <h3 class="font-black text-slate-800 text-[11px] uppercase truncate">${p.nom}</h3>
-                        <p class="text-[8px] text-slate-400 font-bold uppercase mt-1 truncate">📍 ${p.emplacement}</p>
+                        <p class="text-[8px] text-slate-400 font-bold uppercase mt-1">📍 ${p.emplacement}</p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
                         <div class="flex flex-col gap-1">
-                            <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="bg-blue-50 text-blue-600 w-7 h-7 rounded-lg font-black">+</button>
-                            <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="bg-blue-50 text-blue-600 w-7 h-7 rounded-lg font-black">-</button>
+                            <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="bg-slate-100 w-8 h-8 rounded-xl font-black text-blue-600 active:bg-blue-600 active:text-white">+</button>
+                            <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="bg-slate-100 w-8 h-8 rounded-xl font-black text-slate-400 active:bg-red-500 active:text-white">-</button>
                         </div>
-                        <span class="text-xl font-black min-w-[30px] text-center ${p.quantite <= p.seuil_critique ? 'text-red-600' : 'text-blue-900'}">${p.quantite}</span>
-                        <button onclick="ouvrirForm('PIECE', '${p.id}')" class="p-2">⚙️</button>
+                        <span class="text-2xl font-black min-w-[30px] text-center ${p.quantite <= p.seuil_critique ? 'text-red-500' : 'text-blue-900'}">${p.quantite}</span>
+                        <button onclick="ouvrirForm('PIECE', '${p.id}')" class="p-2 text-xl">⚙️</button>
                     </div>
                 </div>
             `).join('');
 
             document.getElementById('liste-materiel').innerHTML = materiel.map(p => `
-                <div class="bg-white p-4 rounded-[2rem] shadow-sm border flex gap-4 items-center ${p.etat === 'HS' ? 'status-hs' : 'border-slate-100'}">
-                    <div class="w-14 h-14 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<span class="text-xs">🛠️</span>`}
+                <div class="bg-white p-4 rounded-[2.5rem] shadow-sm border border-white flex gap-4 items-center ${p.etat === 'HS' ? 'status-hs' : ''}">
+                    <div class="w-16 h-16 rounded-[1.5rem] bg-slate-50 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100">
+                        ${p.image_url ? `<img src="${p.image_url}" loading="lazy" class="w-full h-full object-cover">` : `<span class="text-xl">🛠️</span>`}
                     </div>
                     <div class="flex-1">
                         <h3 class="font-black text-slate-800 text-[11px] uppercase truncate">${p.nom}</h3>
-                        <span class="px-2 py-0.5 rounded-full text-[7px] font-black uppercase ${p.etat === 'OK' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${p.etat || 'OK'}</span>
+                        <span class="px-3 py-1 rounded-full text-[7px] font-black uppercase ${p.etat === 'OK' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${p.etat || 'OK'}</span>
                     </div>
-                    <button onclick="ouvrirForm('MATERIEL', '${p.id}')" class="p-2">⚙️</button>
+                    <button onclick="ouvrirForm('MATERIEL', '${p.id}')" class="p-2 text-xl">⚙️</button>
                 </div>
             `).join('');
         }
@@ -240,8 +262,8 @@
             const id = document.getElementById('edit-id').value;
             const type = document.getElementById('edit-type').value;
             const payload = {
-                nom: document.getElementById('nom').value,
-                barcode: document.getElementById('barcode').value,
+                nom: document.getElementById('nom').value.trim(),
+                barcode: document.getElementById('barcode').value.trim(),
                 emplacement: `${document.getElementById('zone-1').value} - ${document.getElementById('zone-2').value}`,
                 prix_unitaire: parseFloat(document.getElementById('prix').value) || 0,
                 image_url: document.getElementById('photo-url').value,
@@ -250,7 +272,7 @@
                 seuil_critique: type === 'PIECE' ? parseInt(document.getElementById('seuil').value) || 0 : 0,
                 etat: type === 'MATERIEL' ? document.getElementById('etat-materiel').value : 'OK'
             };
-            if(!payload.nom) return;
+            if(!payload.nom) return alert("Nom manquant");
             const res = id ? await sb.from('produits').update(payload).eq('id', id) : await sb.from('produits').insert([payload]);
             if(!res.error) { toggleForm(); chargerDonnees(); notifier("Enregistré"); }
         }
@@ -267,19 +289,33 @@
             let total = 0; const achats = [];
             data.forEach(p => {
                 if(p.categorie === 'MATERIEL' && p.etat === 'HS') {
-                    total += p.prix_unitaire; achats.push({ nom: p.nom, r: "MATÉRIEL HS", p: p.prix_unitaire });
+                    total += p.prix_unitaire; achats.push({ n: p.nom, r: "MATÉRIEL HS", p: p.prix_unitaire });
                 } else if ((p.categorie || 'PIECE') === 'PIECE' && p.quantite <= p.seuil_critique) {
                     const m = (p.seuil_critique + 5) - p.quantite; const c = m * p.prix_unitaire;
-                    total += c; achats.push({ nom: p.nom, r: `STOCK BAS (+${m})`, p: c });
+                    total += c; achats.push({ n: p.nom, r: `STOCK BAS (+${m})`, p: c });
                 }
             });
-            document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
-            document.getElementById('liste-achats').innerHTML = achats.map(a => `<div class="bg-white p-4 rounded-2xl flex justify-between items-center text-[10px] font-bold border border-slate-100 shadow-sm uppercase"><div>${a.nom}<br><span class="text-slate-400 text-[8px]">${a.r}</span></div><div>${a.p.toFixed(2)}€</div></div>`).join('');
+            document.getElementById('total-budget').innerText = total.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + " €";
+            document.getElementById('liste-achats').innerHTML = achats.map(a => `<div class="bg-white p-5 rounded-[2rem] flex justify-between items-center text-[10px] font-black border border-slate-100 shadow-sm uppercase"><div>${a.n}<br><span class="text-slate-400 text-[8px] italic">${a.r}</span></div><div class="text-blue-600">${a.p.toFixed(2)}€</div></div>`).join('');
         }
 
-        // --- UTILITAIRES ---
+        // --- UI ---
+        function showTab(tab) {
+            document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('text-blue-600', 'active');
+                b.classList.add('text-slate-400');
+            });
+            document.getElementById('tab-' + tab).classList.add('active');
+            const targetBtn = [...document.querySelectorAll('.tab-btn')].find(b => b.getAttribute('onclick').includes(tab));
+            targetBtn.classList.replace('text-slate-400', 'text-blue-600');
+            if(tab === 'logs') chargerLogs();
+        }
+
         function ouvrirForm(type, id = null) {
-            resetForm(); document.getElementById('edit-type').value = type;
+            resetForm(); 
+            document.getElementById('edit-type').value = type;
+            document.getElementById('form-title').innerText = type === 'PIECE' ? '📦 Fiche Pièce' : '🛠️ Fiche Matériel';
             document.getElementById('fields-piece').style.display = type === 'PIECE' ? 'grid' : 'none';
             document.getElementById('fields-materiel').style.display = type === 'MATERIEL' ? 'block' : 'none';
             if(id) chargerFiche(id);
@@ -307,32 +343,23 @@
             const c = document.getElementById('scanner-container');
             if (c.classList.contains('hidden')) {
                 c.classList.remove('hidden'); html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, (txt) => { toggleScanner(); traiterScan(txt); });
+                html5QrCode.start({ facingMode: "environment" }, { fps: 30, qrbox: 250 }, (txt) => { toggleScanner(); traiterScan(txt); });
             } else { c.classList.add('hidden'); if(html5QrCode) html5QrCode.stop(); }
         }
 
         async function traiterScan(code) {
             const { data } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
             if(data) { showTab(data.categorie === 'MATERIEL' ? 'materiel' : 'pieces'); ouvrirForm(data.categorie || 'PIECE', data.id); }
-            else { const t = confirm("Nouveau code. Créer MATÉRIEL ? (Sinon PIÈCE)") ? 'MATERIEL' : 'PIECE'; ouvrirForm(t); document.getElementById('barcode').value = code; }
-        }
-
-        function showTab(tab) {
-            document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
-            document.getElementById('tab-' + tab).classList.add('active');
-            const btn = [...document.querySelectorAll('.tab-btn')].find(b => b.onclick.toString().includes(tab));
-            if(btn) btn.classList.replace('text-slate-300', 'text-blue-600');
-            if(tab === 'logs') chargerLogs();
+            else { const t = confirm("Code inconnu. Créer MATÉRIEL ? (Sinon PIÈCE)") ? 'MATERIEL' : 'PIECE'; ouvrirForm(t); document.getElementById('barcode').value = code; }
         }
 
         async function chargerLogs() {
             const { data } = await sb.from('historique').select('*').order('date_action', {ascending: false}).limit(30);
-            document.getElementById('liste-logs').innerHTML = data.map(l => `<div class="p-4 flex justify-between text-[10px] bg-white"><span class="font-black uppercase">${l.produit_nom}</span><span class="font-bold text-blue-600">${l.action}</span></div>`).join('');
+            document.getElementById('liste-logs').innerHTML = data.map(l => `<div class="p-5 flex justify-between text-[9px] bg-white items-center uppercase font-black"><div>${l.produit_nom}<br><span class="text-slate-300 font-bold italic">${new Date(l.date_action).toLocaleString()}</span></div><div class="${l.action.includes('AJOUT') ? 'text-emerald-500' : 'text-blue-500'}">${l.action}</div></div>`).join('');
         }
 
         async function supprimerArticle() {
-            if(!confirm("Supprimer l'article et sa photo ?")) return;
+            if(!confirm("Supprimer l'article ?")) return;
             const id = document.getElementById('edit-id').value;
             const url = document.getElementById('photo-url').value;
             if(url) await sb.storage.from('photos-stock').remove([url.split('/').pop()]);
@@ -343,8 +370,9 @@
         function toggleForm() { document.getElementById('form-container').classList.toggle('hidden'); }
         function resetForm() { 
             document.querySelectorAll('#form-container input').forEach(i => i.value = ""); 
-            document.getElementById('photo-preview').innerHTML = `<span class="text-[10px] text-slate-300 font-black uppercase">Pas de photo</span>`;
+            document.getElementById('photo-preview').innerHTML = `<span class="text-[10px] text-slate-300 font-black uppercase">Pas d'image</span>`;
             document.getElementById('btn-delete').classList.add('hidden');
+            document.getElementById('edit-id').value = "";
         }
 
         checkUser();
