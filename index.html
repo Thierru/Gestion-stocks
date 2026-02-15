@@ -3,44 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Stock Privé</title>
+    <title>Stock Pro - Privé</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-<body class="bg-gray-100 p-4">
-    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-xl">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">📦 Gestion de Stock</h1>
+<body class="bg-slate-50 min-h-screen">
+    <div id="app" class="max-w-2xl mx-auto p-4">
         
-        <div id="login-section">
-            <input id="email" type="email" placeholder="Email" class="w-full border p-3 mb-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            <input id="password" type="password" placeholder="Mot de passe" class="w-full border p-3 mb-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg transition">Se connecter</button>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">📦 Mon Stock <span class="text-sm font-normal bg-blue-100 text-blue-600 px-2 py-1 rounded">PRO</span></h1>
+            <button onclick="logout()" id="btn-logout" class="hidden text-sm text-slate-400 hover:text-red-500">Déconnexion</button>
         </div>
 
-        <div id="stock-section" class="hidden">
-            <div class="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-2 mb-2 rounded shadow-sm">
-                <input id="qty" type="number" placeholder="Quantité initiale" class="w-full border p-2 mb-3 rounded shadow-sm">
-                <button onclick="ajouterArticle()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded shadow transition">+ Ajouter au stock</button>
+        <div id="login-section" class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+            <p class="text-slate-500 mb-6 text-center text-sm">Veuillez vous connecter pour accéder à l'inventaire privé.</p>
+            <input id="email" type="email" placeholder="Email" class="w-full border p-3 mb-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <input id="password" type="password" placeholder="Mot de passe" class="w-full border p-3 mb-6 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <button onclick="login()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-xl hover:bg-blue-700 transition">Entrer dans le stock</button>
+        </div>
+
+        <div id="stock-section" class="hidden space-y-4">
+            
+            <div class="flex gap-2">
+                <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher un article..." class="flex-1 border p-3 rounded-xl shadow-sm outline-none focus:ring-2 focus:ring-blue-400">
+                <button onclick="exportToExcel()" class="bg-green-600 text-white px-4 rounded-xl hover:bg-green-700 shadow-md flex items-center gap-1 font-semibold">📊 <span class="hidden sm:inline">Excel</span></button>
             </div>
 
-            <div id="liste-produits" class="space-y-3 mb-6">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="nom" type="text" placeholder="Nom de l'objet" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
+                    <input id="emplacement" type="text" placeholder="Emplacement (ex: Rayon A)" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
                 </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="qty" type="number" placeholder="Quantité" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
+                    <input id="img" type="text" placeholder="Lien photo (URL)" class="border p-2 rounded-lg text-sm outline-none focus:border-blue-400">
+                </div>
+                <button onclick="ajouterArticle()" class="w-full bg-slate-800 text-white p-2 rounded-lg font-bold hover:bg-slate-900 transition">+ Ajouter au registre</button>
+            </div>
 
-            <button onclick="logout()" class="w-full text-gray-400 text-sm hover:text-red-500 transition border-t pt-4">Déconnexion</button>
+            <div id="liste-produits" class="grid gap-3">
+                </div>
         </div>
     </div>
 
     <script>
+        // --- CONFIGURATION ---
         const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
         const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
         const sb = supabase.createClient(S_URL, S_KEY);
 
+        // --- AUTHENTIFICATION ---
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const { error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) alert("Accès refusé : " + error.message);
+            if (error) alert("Identifiants incorrects");
             else checkUser();
         }
 
@@ -54,54 +72,85 @@
             if (user) {
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('stock-section').classList.remove('hidden');
+                document.getElementById('btn-logout').classList.remove('hidden');
                 chargerProduits();
             }
         }
 
+        // --- GESTION DU STOCK ---
         async function chargerProduits() {
-            const { data, error } = await sb.from('produits').select('*').order('nom', { ascending: true });
+            const search = document.getElementById('search').value.toLowerCase();
+            let { data, error } = await sb.from('produits').select('*').order('nom');
+            
             if (error) return;
 
+            // Filtrage recherche
+            if(search) {
+                data = data.filter(p => p.nom.toLowerCase().includes(search) || (p.emplacement && p.emplacement.toLowerCase().includes(search)));
+            }
+
             const liste = document.getElementById('liste-produits');
-            liste.innerHTML = data.map(p => `
-                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+            liste.innerHTML = data.map(p => {
+                const badgeColor = p.quantite == 0 ? 'bg-red-100 text-red-600' : (p.quantite < 5 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600');
+                return `
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <img src="${p.image_url || 'https://via.placeholder.com/80?text=Pas+d\'image'}" class="w-16 h-16 rounded-lg object-cover bg-slate-100 shadow-inner">
                     <div class="flex-1">
-                        <span class="font-semibold text-gray-700 block">${p.nom}</span>
-                        <span class="text-sm text-gray-500">Stock : <b class="text-blue-600 text-lg">${p.quantite}</b></span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="modifierQty('${p.id}', ${p.quantite - 1})" class="bg-orange-100 text-orange-600 w-8 h-8 rounded-full font-bold shadow-sm">-</button>
-                        <button onclick="modifierQty('${p.id}', ${p.quantite + 1})" class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full font-bold shadow-sm">+</button>
-                        <button onclick="supprimerArticle('${p.id}')" class="ml-2 text-gray-300 hover:text-red-400 text-xs">🗑️</button>
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-slate-800">${p.nom}</h3>
+                            <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${badgeColor}">Stock: ${p.quantite}</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">📍 ${p.emplacement || 'Non défini'}</p>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="updateQty('${p.id}', ${p.quantite - 1})" class="bg-slate-100 px-3 py-1 rounded-md font-bold hover:bg-slate-200 transition">-</button>
+                            <button onclick="updateQty('${p.id}', ${p.quantite + 1})" class="bg-slate-100 px-3 py-1 rounded-md font-bold hover:bg-slate-200 transition">+</button>
+                            <button onclick="supprimerArticle('${p.id}')" class="ml-auto text-slate-300 hover:text-red-400">🗑️</button>
+                        </div>
                     </div>
                 </div>
-            `).join('');
-        }
-
-        async function modifierQty(id, nouvelleQty) {
-            if (nouvelleQty < 0) return;
-            const { error } = await sb.from('produits').update({ quantite: nouvelleQty }).eq('id', id);
-            if (!error) chargerProduits();
+                `;
+            }).join('');
         }
 
         async function ajouterArticle() {
             const nom = document.getElementById('nom').value;
-            const quantite = document.getElementById('qty').value;
-            if(!nom || !quantite) return;
+            const quantite = parseInt(document.getElementById('qty').value);
+            const emplacement = document.getElementById('emplacement').value;
+            const image_url = document.getElementById('img').value;
 
-            const { error } = await sb.from('produits').insert([{ nom, quantite: parseInt(quantite) }]);
-            if (!error) {
+            if(!nom || isNaN(quantite)) return alert("Le nom et la quantité sont requis");
+
+            const { error } = await sb.from('produits').insert([{ nom, quantite, emplacement, image_url }]);
+            if (error) alert(error.message);
+            else {
                 document.getElementById('nom').value = "";
                 document.getElementById('qty').value = "";
+                document.getElementById('emplacement').value = "";
+                document.getElementById('img').value = "";
                 chargerProduits();
             }
         }
 
+        async function updateQty(id, newQty) {
+            if(newQty < 0) return;
+            await sb.from('produits').update({ quantite: newQty }).eq('id', id);
+            chargerProduits();
+        }
+
         async function supprimerArticle(id) {
             if(confirm("Supprimer cet article ?")) {
-                const { error } = await sb.from('produits').delete().eq('id', id);
-                if (!error) chargerProduits();
+                await sb.from('produits').delete().eq('id', id);
+                chargerProduits();
             }
+        }
+
+        // --- EXPORT EXCEL ---
+        async function exportToExcel() {
+            const { data } = await sb.from('produits').select('nom, quantite, emplacement');
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Stock");
+            XLSX.writeFile(workbook, "Mon_Stock.xlsx");
         }
 
         checkUser();
