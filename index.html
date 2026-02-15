@@ -3,270 +3,261 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RTE EMASI V1.21 - Gestion Stock</title>
+<title>EMASI STOCK V1.21</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
 <style>
-body { font-family: sans-serif; background: #f8fafc; }
-.tabs-content { display: none; }
-.tabs-content.active { display: block; }
-.card-info { background: white; border-radius: 1rem; padding: 1rem; border: 1px solid #e2e8f0; }
-.low-stock { border: 2px solid #ef4444 !important; background: #fef2f2; }
-#notifier { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 90%; max-width: 400px; background: rgba(255,255,255,0.95); padding: 1rem; border-radius: 1.5rem; border: 2px solid #3b82f6; text-align: center; }
-#scanner-container { display:none; position:fixed; inset:0; background:black; z-index:200; flex-direction:column; padding:20px; }
-#reader { width:100%; height:300px; }
+body { font-family: Arial; margin:0; background:#f1f5f9; }
+header { background:#0f172a; color:white; padding:10px; text-align:center; }
+nav button { margin:5px; padding:8px 12px; }
+.tab { display:none; padding:15px; }
+.active { display:block; }
+.card {
+    background:white;
+    padding:15px;
+    margin:10px 0;
+    border-radius:10px;
+}
+.low { background:#fecaca; }
+img { max-width:100px; margin-top:10px; }
+button { cursor:pointer; }
+.modal {
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.modal-content {
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    width:90%;
+    max-width:500px;
+}
 </style>
 </head>
+
 <body>
 
-<div id="notifier"><p id="notify-msg" class="font-black uppercase text-blue-900 text-xs"></p></div>
-
-<!-- Login -->
-<div id="login-section" class="max-w-xl mx-auto mt-20 p-8 bg-white rounded-3xl shadow-xl border">
-    <h2 class="font-black text-center mb-4">Accès Inventaire</h2>
-    <input id="pseudo" type="email" placeholder="E-mail" class="w-full p-4 rounded-xl border mb-2">
-    <input id="password" type="password" placeholder="Mot de passe" class="w-full p-4 rounded-xl border mb-4">
-    <button id="btn-login" class="w-full bg-blue-600 text-white p-4 rounded-xl font-black uppercase">Se connecter</button>
-</div>
-
-<!-- Main App -->
-<main id="main-app" class="hidden max-w-3xl mx-auto p-4 space-y-4">
-
-<header id="app-header" class="hidden flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-black text-slate-900">RTE <span class="text-blue-600">EMASI</span> <span class="text-sm font-normal">(V1.21)</span></h1>
-    <button id="btn-logout" class="text-xs font-black bg-white px-4 py-2 rounded-full border shadow-sm">Déconnexion</button>
+<header>
+<h2>📦 EMASI STOCK V1.21</h2>
+<button onclick="logout()">Déconnexion</button>
 </header>
 
-<!-- Tabs -->
-<nav class="flex justify-around bg-white p-2 rounded-2xl shadow-lg">
-    <button class="tab-btn text-blue-600 font-black" data-tab="pieces">📦 Stock</button>
-    <button class="tab-btn text-slate-400 font-black" data-tab="materiel">🛠️ Outils</button>
-    <button class="tab-btn text-slate-400 font-black" data-tab="achats">💰 Budget</button>
-    <button class="tab-btn text-slate-400 font-black" data-tab="historique">📜 Historique</button>
-    <button class="tab-btn text-slate-400 font-black" data-tab="admin">⚙️ Admin</button>
-</nav>
-
-<!-- Tabs Content -->
-<section id="tab-pieces" class="tabs-content active space-y-4 mt-4">
-    <div class="flex gap-2">
-        <input id="search" type="text" placeholder="Chercher article..." class="flex-1 p-4 rounded-2xl border">
-        <button id="btn-scan" class="bg-blue-600 text-white w-14 rounded-2xl flex items-center justify-center text-xl">📷</button>
-    </div>
-    <button id="btn-add-piece" class="w-full bg-white border-2 border-dashed border-blue-200 p-3 rounded-2xl font-black text-blue-600 text-sm">+ Ajouter Article</button>
-    <div id="liste-pieces" class="grid gap-3"></div>
-</section>
-
-<section id="tab-materiel" class="tabs-content space-y-4 mt-4">
-    <button id="btn-add-materiel" class="w-full bg-slate-900 text-white p-3 rounded-2xl font-black text-sm">+ Nouveau Matériel</button>
-    <div id="liste-materiel" class="grid gap-3"></div>
-</section>
-
-<section id="tab-achats" class="tabs-content mt-4">
-    <h2 class="font-black text-lg mb-2">Budget estimé</h2>
-    <p id="total-budget" class="text-2xl font-black">0,00 €</p>
-    <div id="liste-achats" class="space-y-2"></div>
-</section>
-
-<section id="tab-historique" class="tabs-content mt-4">
-    <h2 class="font-black text-lg mb-2">Historique des mouvements</h2>
-    <div id="liste-historique" class="space-y-2"></div>
-</section>
-
-<section id="tab-admin" class="tabs-content mt-4 space-y-4">
-    <button id="btn-export" class="w-full bg-emerald-600 text-white p-3 rounded-xl font-black">📥 Export CSV</button>
-    <input type="file" id="csv-import" accept=".csv" class="w-full mt-2 p-2 border rounded-xl">
-    <button id="btn-import" class="w-full bg-blue-100 text-blue-700 p-3 rounded-xl font-black mt-2">🚀 Import CSV</button>
-</section>
-
-<!-- Formulaire Edition -->
-<div id="form-container" class="hidden fixed inset-0 bg-white z-50 overflow-auto p-6">
-    <div class="max-w-xl mx-auto space-y-4 pb-24">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-black uppercase">Édition Article</h2>
-            <button onclick="toggleForm()" class="text-2xl">✕</button>
-        </div>
-        <div class="relative w-full h-48 bg-slate-100 rounded-3xl overflow-hidden flex items-center justify-center border">
-            <div id="photo-preview" class="w-full h-full flex items-center justify-center">📸</div>
-            <input type="file" id="photo-input" capture="environment" accept="image/*" class="hidden" onchange="traiterPhoto(this)">
-            <button onclick="document.getElementById('photo-input').click()" class="absolute bottom-3 right-3 bg-blue-600 text-white px-4 py-2 rounded-full font-black text-xs">Photo</button>
-        </div>
-        <input type="hidden" id="edit-id">
-        <input type="hidden" id="edit-type">
-        <div class="space-y-4">
-            <input id="nom" type="text" placeholder="Nom" class="w-full p-4 rounded-xl border">
-            <input id="barcode" type="text" placeholder="Code-barres" class="w-full p-4 rounded-xl border">
-            <div class="grid grid-cols-2 gap-3">
-                <input id="zone-1" placeholder="Zone principale" class="w-full p-4 rounded-xl border">
-                <input id="zone-2" placeholder="Zone précision" class="w-full p-4 rounded-xl border">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <input id="qty" type="number" placeholder="Quantité" class="w-full p-4 rounded-xl border">
-                <input id="seuil" type="number" placeholder="Seuil critique" class="w-full p-4 rounded-xl border">
-            </div>
-            <input id="prix" type="number" step="0.01" placeholder="Prix unitaire" class="w-full p-4 rounded-xl border">
-            <select id="etat-materiel" class="w-full p-4 rounded-xl border">
-                <option value="OK">Fonctionnel</option>
-                <option value="HS">Hors Service</option>
-                <option value="CO">Étalonnage</option>
-            </select>
-        </div>
-        <button onclick="sauvegarder()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-black mt-4">Enregistrer</button>
-        <button onclick="supprimerArticle()" class="w-full bg-red-600 text-white p-4 rounded-xl font-black mt-2">Supprimer</button>
-    </div>
+<!-- LOGIN -->
+<div id="login-section" class="active">
+    <h3>Connexion</h3>
+    <input id="pseudo" type="email" placeholder="Email"><br><br>
+    <input id="password" type="password" placeholder="Mot de passe"><br><br>
+    <button id="btn-login">Se connecter</button>
 </div>
 
-<script>
-// === V1.21 - Script complet ===
+<!-- APP -->
+<div id="app" style="display:none">
+
+<nav>
+<button onclick="showTab('pieces')">Pièces</button>
+<button onclick="showTab('materiel')">Matériel</button>
+<button onclick="showTab('budget')">Budget</button>
+<button onclick="showTab('historique')">Historique</button>
+</nav>
+
+<div id="pieces" class="tab active"></div>
+<div id="materiel" class="tab"></div>
+<div id="budget" class="tab"></div>
+<div id="historique" class="tab"></div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="editModal">
+<div class="modal-content">
+<h3>Modifier Article</h3>
+<input type="hidden" id="editId">
+Nom : <input id="editNom"><br><br>
+Quantité : <input type="number" id="editQuantite"><br><br>
+Seuil : <input type="number" id="editSeuil"><br><br>
+Prix : <input type="number" id="editPrix"><br><br>
+<button onclick="saveEdit()">💾 Enregistrer</button>
+<button onclick="deleteArticle()">🗑 Supprimer</button>
+<button onclick="closeModal()">❌ Fermer</button>
+</div>
+</div>
+
+<script defer>
+
+document.addEventListener("DOMContentLoaded", () => {
+
 const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
 const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
 const sb = supabase.createClient(S_URL, S_KEY);
-let userPseudo = "";
-let html5QrCode;
 
-// Notifications
-function notify(msg){
-    const b=document.getElementById('notifier');
-    document.getElementById('notify-msg').innerText = msg.toUpperCase();
-    b.style.display="block";
-    setTimeout(()=>b.style.display="none",2500);
-}
+let currentUser = null;
 
-// Login
-document.getElementById('btn-login').addEventListener('click', async ()=>{
-    const e=document.getElementById('pseudo').value;
-    const p=document.getElementById('password').value;
-    const {error}=await sb.auth.signInWithPassword({email:e.includes('@')?e:e+'@emasi.stock',password:p});
-    if(error) alert("Email ou mot de passe invalide"); else checkUser();
-});
+document.getElementById("btn-login").addEventListener("click", login);
 
-async function checkUser(){
-    const {data:{user}}=await sb.auth.getUser();
-    if(user){
-        userPseudo=user.email.split('@')[0].toUpperCase();
-        document.getElementById('login-section').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('app-header').classList.remove('hidden');
-        chargerDonnees();
+async function login(){
+    const email = pseudo.value;
+    const password = document.getElementById("password").value;
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+    if(error){
+        alert(error.message);
+        return;
     }
+
+    currentUser = data.user;
+    login-section.style.display = "none";
+    app.style.display = "block";
+    loadAll();
 }
 
-document.getElementById('btn-logout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
+window.logout = async function(){
+    await sb.auth.signOut();
+    location.reload();
+}
 
-// Tabs
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>showTab(btn.dataset.tab));
+window.showTab = function(tab){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.getElementById(tab).classList.add("active");
+}
+
+async function loadAll(){
+    loadPieces();
+    loadMateriel();
+    loadHistorique();
+    loadBudget();
+}
+
+async function loadPieces(){
+    const { data } = await sb.from("pieces").select("*");
+    let html="";
+    data.forEach(p=>{
+        html+=`
+        <div class="card ${p.quantite<=p.seuil ? 'low':''}">
+            <b>${p.nom}</b><br>
+            Quantité: ${p.quantite}<br>
+            Seuil: ${p.seuil}<br>
+            Prix: ${p.prix}€<br>
+            ${p.photo ? `<img src="${p.photo}">` : ""}
+            <br><br>
+            <button onclick="adjust(${p.id},1)">➕</button>
+            <button onclick="adjust(${p.id},-1)">➖</button>
+            <button onclick="openEdit(${p.id},'pieces')">✏️ Voir / Éditer</button>
+        </div>
+        `;
+    });
+    pieces.innerHTML=html;
+}
+
+async function loadMateriel(){
+    const { data } = await sb.from("materiel").select("*");
+    let html="";
+    data.forEach(m=>{
+        html+=`
+        <div class="card">
+            <b>${m.nom}</b><br>
+            Statut: ${m.statut}<br>
+            Prix: ${m.prix}€<br>
+            ${m.photo ? `<img src="${m.photo}">` : ""}
+            <br><br>
+            <button onclick="openEdit(${m.id},'materiel')">✏️ Voir / Éditer</button>
+        </div>
+        `;
+    });
+    materiel.innerHTML=html;
+}
+
+window.adjust = async function(id,delta){
+    const { data } = await sb.from("pieces").select("*").eq("id",id).single();
+    let newQ = data.quantite + delta;
+    await sb.from("pieces").update({ quantite:newQ }).eq("id",id);
+
+    await sb.from("historique").insert({
+        article:data.nom,
+        mouvement:delta>0?"Entrée":"Sortie",
+        quantite:Math.abs(delta),
+        utilisateur:currentUser.email
+    });
+
+    loadAll();
+}
+
+window.openEdit = async function(id,table){
+    const { data } = await sb.from(table).select("*").eq("id",id).single();
+    editId.value=id;
+    editNom.value=data.nom;
+    editQuantite.value=data.quantite || 0;
+    editSeuil.value=data.seuil || 0;
+    editPrix.value=data.prix || 0;
+    editModal.style.display="flex";
+    editModal.dataset.table=table;
+}
+
+window.closeModal = function(){
+    editModal.style.display="none";
+}
+
+window.saveEdit = async function(){
+    const table = editModal.dataset.table;
+    await sb.from(table).update({
+        nom:editNom.value,
+        quantite:Number(editQuantite.value),
+        seuil:Number(editSeuil.value),
+        prix:Number(editPrix.value)
+    }).eq("id",editId.value);
+    closeModal();
+    loadAll();
+}
+
+window.deleteArticle = async function(){
+    if(!confirm("Confirmer la suppression ?")) return;
+    const table = editModal.dataset.table;
+    await sb.from(table).delete().eq("id",editId.value);
+    closeModal();
+    loadAll();
+}
+
+async function loadHistorique(){
+    const { data } = await sb.from("historique").select("*").order("created_at",{ascending:false});
+    let html="";
+    data.forEach(h=>{
+        html+=`
+        <div class="card">
+            ${h.created_at}<br>
+            ${h.utilisateur} - ${h.mouvement} - ${h.article} (${h.quantite})
+        </div>
+        `;
+    });
+    historique.innerHTML=html;
+}
+
+async function loadBudget(){
+    const { data:piecesData } = await sb.from("pieces").select("*");
+    const { data:materielData } = await sb.from("materiel").select("*");
+
+    let total=0;
+    piecesData.forEach(p=>{
+        if(p.quantite<p.seuil){
+            total+=(p.seuil-p.quantite)*p.prix;
+        }
+    });
+
+    materielData.forEach(m=>{
+        if(m.statut==="HS"){
+            total+=m.prix;
+        }
+    });
+
+    budget.innerHTML=`<div class="card"><b>Total estimé :</b> ${total} €</div>`;
+}
+
 });
-function showTab(t){
-    document.querySelectorAll('.tabs-content').forEach(c=>c.classList.remove('active'));
-    document.getElementById('tab-'+t).classList.add('active');
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.replace('text-blue-600','text-slate-400'));
-    event.currentTarget?.classList.replace('text-slate-400','text-blue-600');
-}
-
-// Charger données
-async function chargerDonnees(){
-    const {data,error}=await sb.from('produits').select('*').order('nom');
-    if(error){ console.error(error); return; }
-    render(data||[]);
-    calculerBudget(data||[]);
-    chargerHistorique();
-}
-
-// Render
-function render(data){
-    const s=document.getElementById('search').value.toLowerCase();
-    const pieces=data.filter(p=>p.categorie==='PIECE' && p.nom.toLowerCase().includes(s));
-    const materiel=data.filter(p=>p.categorie==='MATERIEL');
-    
-    // Pièces
-    document.getElementById('liste-pieces').innerHTML=pieces.map(p=>`
-        <div class="card-info ${p.quantite<= (p.seuil_critique||0)?'low-stock':''}">
-            <div class="flex gap-4">
-                <div class="w-20 h-20 rounded-2xl bg-slate-50 overflow-hidden flex-shrink-0 border">
-                    ${p.image_url?`<img src="${p.image_url}" class="w-full h-full object-cover">`:'📦'}
-                </div>
-                <div class="flex-1 min-w-0 flex flex-col justify-between">
-                    <div>
-                        <h3 class="font-black text-slate-800 text-sm truncate">${p.nom}</h3>
-                        <p class="text-xs text-blue-600">📍 ${p.zone_principale||''} - ${p.zone_precision||''}</p>
-                        <p class="text-[10px] font-mono text-slate-400">${p.barcode||'---'}</p>
-                    </div>
-                    <div class="flex items-center gap-2 mt-2">
-                        <button onclick="updateStock('${p.id}', -1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black">-</button>
-                        <input type="number" value="${p.quantite||0}" min="0" onchange="updateStockInput('${p.id}', this.value)" class="w-12 text-center border rounded-lg">
-                        <button onclick="updateStock('${p.id}', 1, '${p.nom}')" class="w-7 h-7 bg-slate-100 rounded-lg font-black text-blue-600">+</button>
-                        <button onclick="ouvrirForm('PIECE','${p.id}')" class="ml-1">⚙️</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    // Matériel
-    document.getElementById('liste-materiel').innerHTML=materiel.map(p=>`
-        <div class="card-info ${p.etat==='HS'?'low-stock':''} flex gap-4 items-center">
-            <div class="w-14 h-14 rounded-xl bg-slate-50 overflow-hidden border">
-                ${p.image_url?`<img src="${p.image_url}" class="w-full h-full object-cover">`:'🛠️'}
-            </div>
-            <div class="flex-1">
-                <h3 class="font-black text-[10px] uppercase">${p.nom}</h3>
-                <p class="text-[9px] text-slate-400">📍 ${p.zone_principale||'???'}</p>
-                <span class="text-[9px] font-black uppercase ${p.etat==='OK'?'text-emerald-600':'text-red-600'}">${p.etat||'OK'}</span>
-            </div>
-            <button onclick="ouvrirForm('MATERIEL','${p.id}')">⚙️</button>
-        </div>
-    `).join('');
-}
-
-// Update stock direct
-async function updateStock(id,diff,nom){
-    const {data}=await sb.from('produits').select('quantite').eq('id',id).single();
-    const n=Math.max((data.quantite||0)+diff,0);
-    await sb.from('produits').update({quantite:n}).eq('id',id);
-    await sb.from('historique').insert([{produit_nom:nom,utilisateur:userPseudo,action:diff>0?"ENTRÉE":"SORTIE",quantite_finale:n}]);
-    chargerDonnees();
-}
-
-// Update stock input direct
-async function updateStockInput(id,value){
-    const n=Math.max(parseInt(value)||0,0);
-    const {data}=await sb.from('produits').select('nom').eq('id',id).single();
-    await sb.from('produits').update({quantite:n}).eq('id',id);
-    await sb.from('historique').insert([{produit_nom:data.nom,utilisateur:userPseudo,action:"MODIF",quantite_finale:n}]);
-    chargerDonnees();
-}
-
-// Historique
-async function chargerHistorique(){
-    const {data}=await sb.from('historique').select('*').order('date_action',{ascending:false}).limit(20);
-    document.getElementById('liste-historique').innerHTML=(data||[]).map(l=>`
-        <div class="flex justify-between items-center text-xs font-black uppercase p-2 border-b">
-            <div><span class="text-slate-400 mr-2">${new Date(l.date_action).toLocaleTimeString()}</span>${l.produit_nom}</div>
-            <div class="${l.action==='ENTRÉE'?'text-emerald-600':'text-red-600'}">${l.action} (${l.quantite_finale})</div>
-        </div>
-    `).join('');
-}
-
-// Formulaire
-function toggleForm(){document.getElementById('form-container').classList.toggle('hidden');}
-function ouvrirForm(type,id=null){
-    document.getElementById('edit-id').value=id||"";
-    document.getElementById('edit-type').value=type;
-    if(id) chargerFiche(id);
-    toggleForm();
-}
-async function chargerFiche(id){
-    const {data}=await sb.from('produits').select('*').eq('id',id).single();
-    document.getElementById('nom').value=data.nom;
-    document.getElementById('barcode').value=data.barcode||"";
-    document.getElementById('zone-1').value=data.zone_principale||"";
-    document.getElementById('zone-2').value=data.zone_precision||"";
-    document.getElementById('qty').value=data.quantite;
-    document.getElementById('seuil').value=data.seuil_critique;
-    document.getElementById('prix').value=data.prix_unitaire;
-    document.getElementById('etat-materiel').value=data.etat||'OK';
-    if(data.image_url) document
+</script>
+</body>
+</html>
