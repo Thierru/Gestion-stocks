@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE EMASI LORRAINE - V3.5</title>
+    <title>RTE EMASI LORRAINE - V3.6</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -46,23 +46,22 @@
             </nav>
 
             <div id="tab-stock" class="tabs-content active space-y-4">
-                
                 <div class="grid grid-cols-2 gap-2">
-                    <button onclick="exporterExcel()" class="bg-emerald-600 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md active:scale-95 transition-all">📊 Export (Étiquettes)</button>
-                    <label class="bg-amber-500 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md active:scale-95 transition-all text-center cursor-pointer">
-                        📥 Import / Ajout Excel
+                    <button onclick="exporterExcel()" class="bg-emerald-600 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md">📊 Export Étiquettes</button>
+                    <label class="bg-amber-500 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md text-center cursor-pointer">
+                        📥 Import Excel
                         <input type="file" id="import-excel" class="hidden" accept=".xlsx, .xls">
                     </label>
                 </div>
 
                 <div class="flex gap-2">
                     <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
-                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl" title="Scanner un code">📷</button>
+                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl">📷</button>
                 </div>
 
                 <div id="scanner-container" class="hidden bg-white p-4 rounded-3xl border shadow-inner">
                     <div id="reader"></div>
-                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Annuler le scan</button>
+                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Annuler</button>
                 </div>
                 
                 <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article</button>
@@ -74,17 +73,28 @@
                         <button id="btn-delete" onclick="supprimerArticle()" class="hidden bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-red-100">🗑️ Supprimer</button>
                     </div>
                     <div><label>Désignation</label><input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                    <div><label>ID Code (Auto-rempli par scan)</label><input id="barcode" type="text" placeholder="Scannez un code..." class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase outline-none"></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label>Lieu</label><input id="emplacement" type="text" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                    <div><label>ID Code (Barre/QR)</label><input id="barcode" type="text" class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase outline-none"></div>
+                    
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label>Lieu / Emplacement</label>
+                            <select id="select-emplacement" onchange="handleLieuChange(this.value)" class="w-full border p-3 rounded-xl bg-slate-50 outline-none mb-2">
+                                <option value="">-- Choisir un lieu existant --</option>
+                                <option value="NOUVEAU">+ Ajouter un nouveau lieu...</option>
+                            </select>
+                            <input id="emplacement-manuel" type="text" placeholder="Entrez le nouveau lieu" class="hidden w-full border p-3 rounded-xl bg-amber-50 border-amber-200 outline-none">
+                        </div>
                     </div>
+
                     <div class="grid grid-cols-2 gap-3">
+                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                         <div><label>Prix (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                        <div><label>Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div><label>Seuil d'Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     </div>
                     <div class="flex gap-3 pt-2">
-                        <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Enregistrer</button>
+                        <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg">Enregistrer</button>
                         <button onclick="toggleForm()" class="bg-slate-100 text-slate-500 px-4 rounded-2xl font-bold uppercase text-[10px]">Fermer</button>
                     </div>
                 </div>
@@ -114,6 +124,7 @@
         let userPseudo = "";
         let html5QrCode;
 
+        // --- AUTH ---
         async function login() {
             const pseudo = document.getElementById('pseudo').value;
             const password = document.getElementById('password').value;
@@ -129,10 +140,39 @@
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('btn-logout').classList.remove('hidden');
                 chargerProduits();
+                chargerEmplacements(); // Charger les lieux au démarrage
             }
         }
 
-        // --- SCANNER INTELLIGENT (V3.5) ---
+        // --- GESTION DES LIEUX (HYBRIDE) ---
+        async function chargerEmplacements() {
+            const { data } = await sb.from('produits').select('emplacement');
+            const uniqueLieux = [...new Set(data.map(item => item.emplacement).filter(l => l))].sort();
+            const select = document.getElementById('select-emplacement');
+            
+            // On garde les 2 premières options par défaut
+            select.innerHTML = '<option value="">-- Choisir un lieu existant --</option><option value="NOUVEAU">+ Ajouter un nouveau lieu...</option>';
+            
+            uniqueLieux.forEach(lieu => {
+                const opt = document.createElement('option');
+                opt.value = lieu;
+                opt.textContent = lieu;
+                select.appendChild(opt);
+            });
+        }
+
+        function handleLieuChange(val) {
+            const inputManuel = document.getElementById('emplacement-manuel');
+            if (val === "NOUVEAU") {
+                inputManuel.classList.remove('hidden');
+                inputManuel.focus();
+            } else {
+                inputManuel.classList.add('hidden');
+                inputManuel.value = "";
+            }
+        }
+
+        // --- SCANNER ---
         function toggleScanner() {
             const container = document.getElementById('scanner-container');
             if (container.classList.contains('hidden')) {
@@ -140,7 +180,7 @@
                 html5QrCode = new Html5Qrcode("reader");
                 html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 280, height: 180 } },
                     async (decodedText) => {
-                        toggleScanner(); // Ferme la caméra
+                        toggleScanner();
                         await traiterScan(decodedText);
                     }
                 ).catch(err => console.error(err));
@@ -151,33 +191,17 @@
         }
 
         async function traiterScan(code) {
-            // 1. Chercher si le code existe déjà
-            const { data, error } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
-            
+            const { data } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
             if (data) {
-                // TROUVÉ : On ouvre la fiche pour modification
                 preparerEdition(data.id);
             } else {
-                // INCONNU : On ouvre le formulaire "Ajout" et on pré-remplit le code
                 resetForm();
                 document.getElementById('barcode').value = code;
                 if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
-                alert("Nouveau code détecté : " + code + ". Remplissez le nom pour l'enregistrer.");
             }
         }
 
-        async function supprimerArticle() {
-            const id = document.getElementById('edit-id').value;
-            const nom = document.getElementById('nom').value;
-            if(!id) return;
-            if(confirm(`Supprimer définitivement "${nom}" ?`)) {
-                await sb.from('produits').delete().eq('id', id);
-                await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "🗑️ SUPPRESSION", quantite_finale: 0 }]);
-                toggleForm();
-                chargerProduits();
-            }
-        }
-
+        // --- GESTION PRODUITS ---
         async function chargerProduits() {
             const val = document.getElementById('search').value.toLowerCase();
             let { data, error } = await sb.from('produits').select('*').order('nom');
@@ -191,7 +215,7 @@
                             <h3 class="font-black text-slate-800 text-[11px] uppercase truncate">${p.nom}</h3>
                             <button onclick="preparerEdition('${p.id}')" class="text-[8px] font-black text-blue-500 border px-2 rounded">Détails</button>
                         </div>
-                        <p class="text-[9px] text-slate-400 font-mono mt-1">${p.barcode ? '🆔 ' + p.barcode : '⚠ Pas de code'}</p>
+                        <p class="text-[9px] text-slate-400 font-medium mt-1">📍 ${p.emplacement || 'Non classé'}</p>
                         <div class="flex items-center justify-between mt-2">
                             <div class="flex gap-2">
                                 <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black shadow-inner">-</button>
@@ -206,12 +230,51 @@
 
         async function ajouterOuModifier() {
             const id = document.getElementById('edit-id').value;
-            const obj = { nom: document.getElementById('nom').value, barcode: document.getElementById('barcode').value, emplacement: document.getElementById('emplacement').value, quantite: parseInt(document.getElementById('qty').value) || 0, prix_unitaire: parseFloat(document.getElementById('prix').value) || 0, seuil_critique: parseInt(document.getElementById('seuil').value) || 0 };
-            if(!obj.nom) return alert("Le nom est obligatoire.");
-            let res = id ? await sb.from('produits').update(obj).eq('id', id).select() : await sb.from('produits').insert([obj]).select();
-            if(res.error) alert("Erreur : " + res.error.message); else { toggleForm(); chargerProduits(); }
+            const selectLieu = document.getElementById('select-emplacement').value;
+            const manuelLieu = document.getElementById('emplacement-manuel').value;
+            
+            // Le lieu final est soit celui du select, soit le manuel si "NOUVEAU"
+            const lieuFinal = (selectLieu === "NOUVEAU") ? manuelLieu : selectLieu;
+
+            const obj = { 
+                nom: document.getElementById('nom').value, 
+                barcode: document.getElementById('barcode').value, 
+                emplacement: lieuFinal, 
+                quantite: parseInt(document.getElementById('qty').value) || 0, 
+                prix_unitaire: parseFloat(document.getElementById('prix').value) || 0, 
+                seuil_critique: parseInt(document.getElementById('seuil').value) || 0 
+            };
+
+            if(!obj.nom) return alert("Nom obligatoire.");
+            
+            const res = id ? await sb.from('produits').update(obj).eq('id', id) : await sb.from('produits').insert([obj]);
+            
+            if(res.error) alert("Erreur : " + res.error.message); 
+            else { 
+                toggleForm(); 
+                chargerProduits(); 
+                chargerEmplacements(); // Recharger la liste des lieux au cas où un nouveau a été créé
+            }
         }
 
+        async function preparerEdition(id) {
+            const { data } = await sb.from('produits').select('*').eq('id', id).single();
+            document.getElementById('edit-id').value = data.id; 
+            document.getElementById('nom').value = data.nom; 
+            document.getElementById('barcode').value = data.barcode || "";
+            document.getElementById('qty').value = data.quantite; 
+            document.getElementById('prix').value = data.prix_unitaire; 
+            document.getElementById('seuil').value = data.seuil_critique;
+            
+            // Sélectionner le bon emplacement dans la liste
+            document.getElementById('select-emplacement').value = data.emplacement || "";
+            document.getElementById('emplacement-manuel').classList.add('hidden');
+            
+            document.getElementById('btn-delete').classList.remove('hidden');
+            if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
+        }
+
+        // --- AUTRES FONCTIONS (Navigation, Qty, etc.) ---
         async function updateQty(id, newQty, nom) {
             if(newQty < 0) return;
             const { data: p } = await sb.from('produits').select('quantite').eq('id', id).single();
@@ -221,17 +284,26 @@
             chargerProduits();
         }
 
-        async function preparerEdition(id) {
-            const { data } = await sb.from('produits').select('*').eq('id', id).single();
-            document.getElementById('edit-id').value = data.id; 
-            document.getElementById('nom').value = data.nom; 
-            document.getElementById('barcode').value = data.barcode || "";
-            document.getElementById('emplacement').value = data.emplacement;
-            document.getElementById('qty').value = data.quantite; 
-            document.getElementById('prix').value = data.prix_unitaire; 
-            document.getElementById('seuil').value = data.seuil_critique;
-            document.getElementById('btn-delete').classList.remove('hidden');
-            if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
+        async function supprimerArticle() {
+            const id = document.getElementById('edit-id').value;
+            const nom = document.getElementById('nom').value;
+            if(confirm(`Supprimer définitivement "${nom}" ?`)) {
+                await sb.from('produits').delete().eq('id', id);
+                await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "🗑️ SUPPRESSION", quantite_finale: 0 }]);
+                toggleForm(); chargerProduits(); chargerEmplacements();
+            }
+        }
+
+        function toggleForm() { 
+            document.getElementById('form-container').classList.toggle('hidden'); 
+            if(document.getElementById('form-container').classList.contains('hidden')) resetForm();
+        }
+        function resetForm() { 
+            document.querySelectorAll('#form-container input').forEach(i => i.value = ""); 
+            document.getElementById('edit-id').value = "";
+            document.getElementById('select-emplacement').value = "";
+            document.getElementById('emplacement-manuel').classList.add('hidden');
+            document.getElementById('btn-delete').classList.add('hidden');
         }
 
         function showTab(tab) {
@@ -244,8 +316,7 @@
 
         async function chargerLogs() {
             const { data } = await sb.from('historique').select('*').order('date_action', { ascending: false }).limit(30);
-            const liste = document.getElementById('liste-logs');
-            liste.innerHTML = data ? data.map(l => `<div class="p-4 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span class="${l.action.includes('AJOUT') ? 'text-green-600' : 'text-red-600'}">${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('') : "";
+            document.getElementById('liste-logs').innerHTML = data.map(l => `<div class="p-4 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span class="${l.action.includes('AJOUT') ? 'text-green-600' : 'text-red-600'}">${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('');
         }
 
         async function calculerAchats() {
@@ -260,42 +331,8 @@
             document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
         }
 
-        async function exporterExcel() {
-            const { data } = await sb.from('produits').select('nom, barcode, emplacement, quantite, prix_unitaire, seuil_critique').order('nom');
-            const wsData = data.map(p => ({ "ARTICLE": p.nom, "CODE_VALEUR": p.barcode || "", "Lieu": p.emplacement || "", "Stock": p.quantite, "Prix_EUR": p.prix_unitaire, "Alerte": p.seuil_critique }));
-            const ws = XLSX.utils.json_to_sheet(wsData);
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventaire");
-            XLSX.writeFile(wb, `RTE_LORRAINE_ETIQUETTES.xlsx`);
-        }
-
-        document.getElementById('import-excel').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = async (evt) => {
-                const bstr = evt.target.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
-                const excelData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                const { data: currentDb } = await sb.from('produits').select('nom');
-                const existingNoms = currentDb.map(p => p.nom.toLowerCase());
-                for (let row of excelData) {
-                    const nomArticle = row["ARTICLE"]; if(!nomArticle) continue;
-                    const payload = { barcode: row["CODE_VALEUR"] ? row["CODE_VALEUR"].toString() : "", emplacement: row["Lieu"] || "", quantite: parseInt(row["Stock"]) || 0, prix_unitaire: parseFloat(row["Prix_EUR"]) || 0, seuil_critique: parseInt(row["Alerte"]) || 0 };
-                    if (existingNoms.includes(nomArticle.toLowerCase())) await sb.from('produits').update(payload).eq('nom', nomArticle);
-                    else await sb.from('produits').insert([{ nom: nomArticle, ...payload }]);
-                }
-                alert("Importation réussie !"); chargerProduits();
-            };
-            reader.readAsBinaryString(e.target.files[0]);
-        });
-
-        function toggleForm() { 
-            document.getElementById('form-container').classList.toggle('hidden'); 
-            if(document.getElementById('form-container').classList.contains('hidden')) {
-                resetForm();
-                document.getElementById('btn-delete').classList.add('hidden');
-            }
-        }
-        function resetForm() { document.querySelectorAll('#form-container input').forEach(i => i.value = ""); document.getElementById('edit-id').value = ""; }
         function envoyerRapportMail() { window.location.href = `mailto:thierry.p057@gmail.com?subject=Rapport RTE LORRAINE&body=Budget réappro : ${document.getElementById('total-budget').innerText}.`; }
+        
         checkUser();
     </script>
 </body>
