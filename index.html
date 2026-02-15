@@ -7,46 +7,46 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-5">
-    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg">
-        <h1 class="text-2xl font-bold mb-4 text-center">📦 Gestion Stock</h1>
+<body class="bg-gray-100 p-4">
+    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-xl">
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">📦 Gestion de Stock</h1>
         
         <div id="login-section">
-            <input id="email" type="email" placeholder="Email" class="w-full border p-2 mb-2 rounded">
-            <input id="password" type="password" placeholder="Mot de passe" class="w-full border p-2 mb-4 rounded">
-            <button onclick="login()" class="w-full bg-blue-600 text-white p-2 rounded">Se connecter</button>
+            <input id="email" type="email" placeholder="Email" class="w-full border p-3 mb-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            <input id="password" type="password" placeholder="Mot de passe" class="w-full border p-3 mb-4 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg transition">Se connecter</button>
         </div>
 
         <div id="stock-section" class="hidden">
-            <div class="mb-6 border-b pb-4">
-                <input id="nom" type="text" placeholder="Nom article" class="w-full border p-2 mb-2 rounded">
-                <input id="qty" type="number" placeholder="Quantité" class="w-full border p-2 mb-2 rounded">
-                <button onclick="ajouterArticle()" class="w-full bg-green-500 text-white p-2 rounded">+ Ajouter</button>
+            <div class="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                <input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-2 mb-2 rounded shadow-sm">
+                <input id="qty" type="number" placeholder="Quantité initiale" class="w-full border p-2 mb-3 rounded shadow-sm">
+                <button onclick="ajouterArticle()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold p-2 rounded shadow transition">+ Ajouter au stock</button>
             </div>
-            <ul id="liste-produits" class="space-y-2 mb-4"></ul>
-            <button onclick="logout()" class="w-full text-red-500 text-sm border border-red-200 py-1 rounded">Déconnexion</button>
+
+            <div id="liste-produits" class="space-y-3 mb-6">
+                </div>
+
+            <button onclick="logout()" class="w-full text-gray-400 text-sm hover:text-red-500 transition border-t pt-4">Déconnexion</button>
         </div>
     </div>
 
     <script>
-        // Configuration
         const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
         const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
-        
-        // Initialisation du client (nommé 'sb' pour éviter les erreurs)
         const sb = supabase.createClient(S_URL, S_KEY);
 
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const { data, error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) alert("Erreur: " + error.message);
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) alert("Accès refusé : " + error.message);
             else checkUser();
         }
 
         async function logout() {
             await sb.auth.signOut();
-            location.reload(); // Recharge la page pour masquer le stock
+            location.reload();
         }
 
         async function checkUser() {
@@ -60,37 +60,50 @@
 
         async function chargerProduits() {
             const { data, error } = await sb.from('produits').select('*').order('nom', { ascending: true });
-            if (error) {
-                console.error(error);
-                return;
-            }
+            if (error) return;
+
             const liste = document.getElementById('liste-produits');
             liste.innerHTML = data.map(p => `
-                <li class="flex justify-between border-b py-2 text-gray-700">
-                    <span>${p.nom}</span>
-                    <span class="font-bold bg-gray-100 px-2 rounded">x${p.quantite}</span>
-                </li>
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
+                    <div class="flex-1">
+                        <span class="font-semibold text-gray-700 block">${p.nom}</span>
+                        <span class="text-sm text-gray-500">Stock : <b class="text-blue-600 text-lg">${p.quantite}</b></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="modifierQty('${p.id}', ${p.quantite - 1})" class="bg-orange-100 text-orange-600 w-8 h-8 rounded-full font-bold shadow-sm">-</button>
+                        <button onclick="modifierQty('${p.id}', ${p.quantite + 1})" class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full font-bold shadow-sm">+</button>
+                        <button onclick="supprimerArticle('${p.id}')" class="ml-2 text-gray-300 hover:text-red-400 text-xs">🗑️</button>
+                    </div>
+                </div>
             `).join('');
+        }
+
+        async function modifierQty(id, nouvelleQty) {
+            if (nouvelleQty < 0) return;
+            const { error } = await sb.from('produits').update({ quantite: nouvelleQty }).eq('id', id);
+            if (!error) chargerProduits();
         }
 
         async function ajouterArticle() {
             const nom = document.getElementById('nom').value;
             const quantite = document.getElementById('qty').value;
-            
-            if(!nom || !quantite) return alert("Remplis les deux champs !");
+            if(!nom || !quantite) return;
 
-            const { error } = await sb.from('produits').insert([{ nom: nom, quantite: parseInt(quantite) }]);
-            
-            if (error) {
-                alert("Erreur d'ajout : " + error.message);
-            } else {
+            const { error } = await sb.from('produits').insert([{ nom, quantite: parseInt(quantite) }]);
+            if (!error) {
                 document.getElementById('nom').value = "";
                 document.getElementById('qty').value = "";
                 chargerProduits();
             }
         }
 
-        // Vérification automatique au démarrage
+        async function supprimerArticle(id) {
+            if(confirm("Supprimer cet article ?")) {
+                const { error } = await sb.from('produits').delete().eq('id', id);
+                if (!error) chargerProduits();
+            }
+        }
+
         checkUser();
     </script>
 </body>
