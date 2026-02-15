@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE EMASI LORRAINE - V3.8</title>
+    <title>RTE EMASI LORRAINE - V3.9</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -46,49 +46,56 @@
             </nav>
 
             <div id="tab-stock" class="tabs-content active space-y-4">
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="exporterExcel()" class="bg-emerald-600 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md">📊 Export Excel</button>
-                    <label class="bg-amber-500 text-white p-3 rounded-xl font-black text-[9px] uppercase shadow-md text-center cursor-pointer">
-                        📥 Import Excel
-                        <input type="file" id="import-excel" class="hidden" accept=".xlsx, .xls">
-                    </label>
-                </div>
-
                 <div class="flex gap-2">
-                    <input id="search" oninput="chargerProduits()" type="text" placeholder="Chercher article ou code..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
+                    <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
                     <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl">📷</button>
                 </div>
 
                 <div id="scanner-container" class="hidden bg-white p-4 rounded-3xl border shadow-inner">
                     <div id="reader"></div>
-                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Arrêter la caméra</button>
+                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Fermer Caméra</button>
                 </div>
                 
-                <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article Manuel</button>
+                <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article</button>
                 
-                <div id="form-container" class="hidden bg-white p-6 rounded-[2rem] border shadow-2xl space-y-4 transition-all duration-300">
+                <div id="form-container" class="hidden bg-white p-6 rounded-[2rem] border shadow-2xl space-y-4">
                     <input id="edit-id" type="hidden">
                     <div class="flex justify-between items-center">
-                        <label class="text-blue-600 font-black">Fiche Détails Article</label>
+                        <label class="text-blue-600 font-black">Fiche Article</label>
                         <button id="btn-delete" onclick="supprimerArticle()" class="hidden bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-red-100">🗑️ Supprimer</button>
                     </div>
-                    <div><label>Désignation</label><input id="nom" type="text" placeholder="Ex: Multimètre Fluke" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                    <div><label>ID Code (Barre/QR)</label><input id="barcode" type="text" placeholder="Scannez pour remplir..." class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase outline-none"></div>
                     
-                    <div>
-                        <label>Emplacement</label>
-                        <select id="select-emplacement" onchange="handleLieuChange(this.value)" class="w-full border p-3 rounded-xl bg-slate-50 outline-none mb-2">
-                            <option value="">-- Sélectionner un lieu --</option>
-                            <option value="NOUVEAU">+ Ajouter un nouveau lieu...</option>
-                        </select>
-                        <input id="emplacement-manuel" type="text" placeholder="Nom du nouveau lieu" class="hidden w-full border p-3 rounded-xl bg-amber-50 border-amber-200 outline-none">
+                    <div><label>Désignation</label><input id="nom" type="text" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                    <div><label>ID Code</label><input id="barcode" type="text" class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 outline-none"></div>
+                    
+                    <div class="grid grid-cols-1 gap-2">
+                        <div>
+                            <label>Emplacement 1 (Zone)</label>
+                            <select id="zone-1" onchange="updateZone2Options(this.value)" class="w-full border p-3 rounded-xl bg-slate-50 outline-none">
+                                <option value="">-- Choisir Zone --</option>
+                                <option value="LABO">LABO</option>
+                                <option value="ATELIER">ATELIER</option>
+                                <option value="BUREAU">BUREAU</option>
+                                <option value="NOUVEAU">+ Autre Zone...</option>
+                            </select>
+                            <input id="zone-1-manuel" type="text" placeholder="Nom de la nouvelle zone" class="hidden mt-2 w-full border p-3 rounded-xl bg-amber-50 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2">
+                        <div>
+                            <label>Emplacement 2 (Précision)</label>
+                            <select id="zone-2" onchange="handleZone2Change(this.value)" class="w-full border p-3 rounded-xl bg-slate-50 outline-none">
+                                <option value="">-- Choisir Précision --</option>
+                            </select>
+                            <input id="zone-2-manuel" type="text" placeholder="Précision libre" class="hidden mt-2 w-full border p-3 rounded-xl bg-amber-50 outline-none">
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label>Stock Actuel</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                         <div><label>Prix HT (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     </div>
-                    <div><label>Seuil d'Alerte (Commande)</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     
                     <div class="flex gap-3 pt-2">
                         <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg">Enregistrer</button>
@@ -100,16 +107,10 @@
             </div>
 
             <div id="tab-achats" class="tabs-content space-y-4">
-                <div class="bg-gradient-to-br from-blue-700 to-blue-900 p-8 rounded-[2.5rem] text-white shadow-xl text-center">
-                    <p class="text-[10px] uppercase font-black opacity-60 tracking-widest">Prévisionnel Achats</p>
-                    <h2 id="total-budget" class="text-4xl font-black mt-1">0.00 €</h2>
-                    <button onclick="envoyerRapportMail()" class="mt-6 w-full bg-white text-blue-800 py-3 rounded-xl text-[10px] font-black uppercase shadow-md">📧 Envoyer rapport à Thierry</button>
-                </div>
                 <div id="liste-achats" class="grid gap-3"></div>
             </div>
-
             <div id="tab-logs" class="tabs-content space-y-4">
-                <div id="liste-logs" class="bg-white rounded-[1.5rem] border shadow-sm divide-y"></div>
+                <div id="liste-logs" class="bg-white rounded-xl border shadow-sm divide-y"></div>
             </div>
         </div>
     </div>
@@ -121,24 +122,21 @@
         let userPseudo = "";
         let html5QrCode;
 
-        // --- SYSTEME DE NOTIFICATION ---
+        // --- NOTIFICATION ---
         function notifier(message, type = "success") {
             const toast = document.createElement('div');
             toast.className = `fixed top-10 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full font-black text-xs shadow-2xl transition-all transform duration-500 text-center ${type === 'success' ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'}`;
             toast.innerHTML = message;
             document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-[-20px]');
-                setTimeout(() => toast.remove(), 500);
-            }, 2500);
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-[-20px]'); setTimeout(() => toast.remove(), 500); }, 2500);
         }
 
-        // --- AUTHENTIFICATION ---
+        // --- AUTH ---
         async function login() {
             const pseudo = document.getElementById('pseudo').value;
             const password = document.getElementById('password').value;
             const { data, error } = await sb.auth.signInWithPassword({ email: pseudo.toLowerCase() + "@emasi.stock", password });
-            if (error) alert("Accès refusé."); else checkUser();
+            if (error) alert("Identifiants incorrects."); else checkUser();
         }
         async function logout() { await sb.auth.signOut(); location.reload(); }
         async function checkUser() {
@@ -149,26 +147,43 @@
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('btn-logout').classList.remove('hidden');
                 chargerProduits();
-                chargerEmplacements();
             }
         }
 
-        // --- GESTION DES LIEUX ---
-        async function chargerEmplacements() {
-            const { data } = await sb.from('produits').select('emplacement');
-            const uniqueLieux = [...new Set(data.map(item => item.emplacement).filter(l => l))].sort();
-            const select = document.getElementById('select-emplacement');
-            select.innerHTML = '<option value="">-- Sélectionner un lieu --</option><option value="NOUVEAU">+ Ajouter un nouveau lieu...</option>';
-            uniqueLieux.forEach(lieu => {
-                const opt = document.createElement('option'); opt.value = lieu; opt.textContent = lieu; select.appendChild(opt);
-            });
-        }
-        function handleLieuChange(val) {
-            const inputManuel = document.getElementById('emplacement-manuel');
-            if (val === "NOUVEAU") inputManuel.classList.remove('hidden'); else inputManuel.classList.add('hidden');
+        // --- LOGIQUE DOUBLE EMPLACEMENT ---
+        const sousZonesPrefinies = {
+            "LABO": ["Armoire 1", "Armoire 2"],
+            "ATELIER": ["Etagère 1", "Etagère 2"],
+            "BUREAU": ["Armoire 1", "Armoire 2"]
+        };
+
+        function updateZone2Options(zone) {
+            const select2 = document.getElementById('zone-2');
+            const manuel1 = document.getElementById('zone-1-manuel');
+            const manuel2 = document.getElementById('zone-2-manuel');
+            
+            select2.innerHTML = '<option value="">-- Choisir Précision --</option><option value="NOUVEAU">+ Choix libre / Nouveau...</option>';
+            manuel1.classList.add('hidden');
+            manuel2.classList.add('hidden');
+
+            if (zone === "NOUVEAU") {
+                manuel1.classList.remove('hidden');
+                manuel2.classList.remove('hidden');
+                select2.value = "NOUVEAU";
+            } else if (sousZonesPrefinies[zone]) {
+                sousZonesPrefinies[zone].forEach(sz => {
+                    const opt = document.createElement('option'); opt.value = sz; opt.textContent = sz;
+                    select2.appendChild(opt);
+                });
+            }
         }
 
-        // --- SCANNER ET TRAITEMENT ---
+        function handleZone2Change(val) {
+            const manuel2 = document.getElementById('zone-2-manuel');
+            if (val === "NOUVEAU") manuel2.classList.remove('hidden'); else manuel2.classList.add('hidden');
+        }
+
+        // --- SCANNER ---
         function toggleScanner() {
             const container = document.getElementById('scanner-container');
             if (container.classList.contains('hidden')) {
@@ -177,10 +192,7 @@
                 html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 280, height: 180 } },
                     async (decodedText) => { toggleScanner(); await traiterScan(decodedText); }
                 ).catch(err => console.error(err));
-            } else {
-                container.classList.add('hidden');
-                if(html5QrCode) html5QrCode.stop();
-            }
+            } else { container.classList.add('hidden'); if(html5QrCode) html5QrCode.stop(); }
         }
 
         async function traiterScan(code) {
@@ -188,9 +200,6 @@
             if (data) {
                 notifier(`✅ ARTICLE TROUVÉ :<br>${data.nom.toUpperCase()}`);
                 preparerEdition(data.id);
-                const form = document.getElementById('form-container');
-                form.classList.add('ring-4', 'ring-emerald-400');
-                setTimeout(() => form.classList.remove('ring-4', 'ring-emerald-400'), 2000);
             } else {
                 notifier(`🆕 NOUVEAU CODE DÉTECTÉ :<br>${code}`, "info");
                 resetForm();
@@ -199,15 +208,13 @@
             }
         }
 
-        // --- ACTIONS PRODUITS ---
+        // --- PRODUITS ---
         async function chargerProduits() {
             const val = document.getElementById('search').value.toLowerCase();
-            let { data, error } = await sb.from('produits').select('*').order('nom');
-            if(error) return;
+            let { data } = await sb.from('produits').select('*').order('nom');
             if(val) data = data.filter(p => p.nom.toLowerCase().includes(val) || (p.barcode && p.barcode.toLowerCase().includes(val)));
             
-            const liste = document.getElementById('liste-produits');
-            liste.innerHTML = data.map(p => `
+            document.getElementById('liste-produits').innerHTML = data.map(p => `
                 <div class="bg-white p-5 rounded-[2rem] shadow-sm flex flex-col gap-3 border ${p.quantite <= p.seuil_critique ? 'low-stock' : 'border-slate-100'}">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
@@ -220,18 +227,13 @@
                         <button onclick="preparerEdition('${p.id}')" class="bg-slate-100 p-2 rounded-xl text-lg">⚙️</button>
                     </div>
                     <div class="flex justify-between items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                        <div class="text-[10px] font-bold text-slate-400 uppercase">
-                            Prix: <span class="text-slate-600">${p.prix_unitaire}€</span><br>
-                            Seuil: <span class="text-slate-600">${p.seuil_critique}</span>
-                        </div>
+                        <div class="text-[10px] font-bold text-slate-400">STOCK</div>
                         <div class="flex items-center gap-3">
                             <div class="flex gap-1">
-                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm active:bg-slate-100">-</button>
-                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm active:bg-slate-100">+</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm">-</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-white border w-10 h-10 rounded-xl font-black shadow-sm">+</button>
                             </div>
-                            <div class="text-right ml-2">
-                                <span class="text-2xl font-black ${p.quantite <= p.seuil_critique ? 'text-red-600' : 'text-blue-900'}">x${p.quantite}</span>
-                            </div>
+                            <span class="text-2xl font-black ${p.quantite <= p.seuil_critique ? 'text-red-600' : 'text-blue-900'}">x${p.quantite}</span>
                         </div>
                     </div>
                 </div>
@@ -240,28 +242,28 @@
 
         async function ajouterOuModifier() {
             const id = document.getElementById('edit-id').value;
-            const selectLieu = document.getElementById('select-emplacement').value;
-            const manuelLieu = document.getElementById('emplacement-manuel').value;
-            const lieuFinal = (selectLieu === "NOUVEAU") ? manuelLieu : selectLieu;
-            const obj = { nom: document.getElementById('nom').value, barcode: document.getElementById('barcode').value, emplacement: lieuFinal, quantite: parseInt(document.getElementById('qty').value) || 0, prix_unitaire: parseFloat(document.getElementById('prix').value) || 0, seuil_critique: parseInt(document.getElementById('seuil').value) || 0 };
-            
-            if(!obj.nom) return alert("Le nom est obligatoire.");
+            const z1 = document.getElementById('zone-1').value;
+            const z2 = document.getElementById('zone-2').value;
+            const m1 = document.getElementById('zone-1-manuel').value;
+            const m2 = document.getElementById('zone-2-manuel').value;
+
+            // Construction du texte final de l'emplacement
+            const finalZone1 = (z1 === "NOUVEAU") ? m1 : z1;
+            const finalZone2 = (z2 === "NOUVEAU") ? m2 : z2;
+            const emplacementComplet = (finalZone1 && finalZone2) ? `${finalZone1} - ${finalZone2}` : (finalZone1 || finalZone2 || "Non classé");
+
+            const obj = { 
+                nom: document.getElementById('nom').value, 
+                barcode: document.getElementById('barcode').value, 
+                emplacement: emplacementComplet, 
+                quantite: parseInt(document.getElementById('qty').value) || 0, 
+                prix_unitaire: parseFloat(document.getElementById('prix').value) || 0 
+            };
+
+            if(!obj.nom) return alert("Nom obligatoire.");
             const res = id ? await sb.from('produits').update(obj).eq('id', id) : await sb.from('produits').insert([obj]);
             
-            if(res.error) alert("Erreur : " + res.error.message); 
-            else { 
-                toggleForm(); chargerProduits(); chargerEmplacements(); 
-                notifier(id ? "Article mis à jour" : "Nouvel article créé"); 
-            }
-        }
-
-        async function updateQty(id, newQty, nom) {
-            if(newQty < 0) return;
-            const { data: p } = await sb.from('produits').select('quantite').eq('id', id).single();
-            const action = newQty > p.quantite ? "➕ AJOUT" : "➖ SORTIE";
-            await sb.from('produits').update({ quantite: newQty }).eq('id', id);
-            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: action, quantite_finale: newQty }]);
-            chargerProduits();
+            if(!res.error) { toggleForm(); chargerProduits(); notifier("Enregistré !"); }
         }
 
         async function preparerEdition(id) {
@@ -271,68 +273,44 @@
             document.getElementById('barcode').value = data.barcode || "";
             document.getElementById('qty').value = data.quantite; 
             document.getElementById('prix').value = data.prix_unitaire; 
-            document.getElementById('seuil').value = data.seuil_critique;
-            document.getElementById('select-emplacement').value = data.emplacement || "";
+            
+            // On décompose l'emplacement s'il contient un " - "
+            const parts = (data.emplacement || "").split(' - ');
+            const z1Select = document.getElementById('zone-1');
+            
+            if (parts[0]) {
+                z1Select.value = parts[0];
+                updateZone2Options(parts[0]);
+                if (parts[1]) {
+                    const z2Select = document.getElementById('zone-2');
+                    // Si l'option n'existe pas dans le select, on passe en manuel
+                    if (![...z2Select.options].some(o => o.value === parts[1])) {
+                        z2Select.value = "NOUVEAU";
+                        document.getElementById('zone-2-manuel').classList.remove('hidden');
+                        document.getElementById('zone-2-manuel').value = parts[1];
+                    } else {
+                        z2Select.value = parts[1];
+                    }
+                }
+            }
+            
             document.getElementById('btn-delete').classList.remove('hidden');
             if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
         }
 
-        async function supprimerArticle() {
-            const id = document.getElementById('edit-id').value;
-            const nom = document.getElementById('nom').value;
-            if(confirm(`Supprimer définitivement "${nom}" ?`)) {
-                await sb.from('produits').delete().eq('id', id);
-                await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "🗑️ SUPPRESSION", quantite_finale: 0 }]);
-                toggleForm(); chargerProduits(); chargerEmplacements(); 
-                notifier("Article supprimé", "info");
-            }
+        // --- AUTRES ---
+        async function updateQty(id, newQty, nom) {
+            if(newQty < 0) return;
+            await sb.from('produits').update({ quantite: newQty }).eq('id', id);
+            await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "MAJ STOCK", quantite_finale: newQty }]);
+            chargerProduits();
         }
-
-        // --- NAVIGATION ET UI ---
-        function toggleForm() { 
-            document.getElementById('form-container').classList.toggle('hidden'); 
-            if(document.getElementById('form-container').classList.contains('hidden')) resetForm();
-        }
-        function resetForm() { 
-            document.querySelectorAll('#form-container input').forEach(i => i.value = ""); 
-            document.getElementById('edit-id').value = ""; document.getElementById('select-emplacement').value = "";
-            document.getElementById('emplacement-manuel').classList.add('hidden'); document.getElementById('btn-delete').classList.add('hidden');
-        }
+        function toggleForm() { document.getElementById('form-container').classList.toggle('hidden'); if(document.getElementById('form-container').classList.contains('hidden')) resetForm(); }
+        function resetForm() { document.querySelectorAll('#form-container input').forEach(i => i.value = ""); document.getElementById('btn-delete').classList.add('hidden'); document.getElementById('zone-1').value=""; document.getElementById('zone-2').innerHTML='<option value="">-- Choisir Précision --</option>'; }
         function showTab(tab) {
             document.querySelectorAll('.tabs-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.replace('text-blue-600', 'text-slate-300'));
             document.getElementById('tab-' + tab).classList.add('active');
-            event.currentTarget.classList.replace('text-slate-300', 'text-blue-600');
-            if(tab === 'achats') calculerAchats(); if(tab === 'logs') chargerLogs();
         }
-
-        async function chargerLogs() {
-            const { data } = await sb.from('historique').select('*').order('date_action', { ascending: false }).limit(30);
-            document.getElementById('liste-logs').innerHTML = data.map(l => `<div class="p-4 flex justify-between items-center text-[10px] border-b"><div class="font-black uppercase">${l.produit_nom}<br><span class="text-blue-500">PAR: ${l.utilisateur}</span></div><div class="text-right font-black"><span class="${l.action.includes('AJOUT') ? 'text-green-600' : 'text-red-600'}">${l.action}</span><br><span class="text-slate-300">${new Date(l.date_action).toLocaleTimeString()}</span></div></div>`).join('');
-        }
-
-        async function calculerAchats() {
-            const { data } = await sb.from('produits').select('*');
-            const alertes = data.filter(p => p.quantite <= p.seuil_critique);
-            let total = 0;
-            document.getElementById('liste-achats').innerHTML = alertes.map(p => {
-                const manque = (p.seuil_critique + 5) - p.quantite;
-                const cout = manque * p.prix_unitaire; total += cout;
-                return `<div class="bg-white p-4 rounded-2xl border-l-4 border-red-500 flex justify-between items-center text-xs shadow-sm"><div class="font-black uppercase">${p.nom}</div><p class="font-black text-slate-800">${cout.toFixed(2)} €</p></div>`;
-            }).join('');
-            document.getElementById('total-budget').innerText = total.toFixed(2) + " €";
-        }
-
-        async function exporterExcel() {
-            const { data } = await sb.from('produits').select('nom, barcode, emplacement, quantite, prix_unitaire, seuil_critique').order('nom');
-            const wsData = data.map(p => ({ "ARTICLE": p.nom, "CODE": p.barcode || "", "Lieu": p.emplacement || "", "Stock": p.quantite, "Prix": p.prix_unitaire, "Alerte": p.seuil_critique }));
-            const ws = XLSX.utils.json_to_sheet(wsData);
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventaire");
-            XLSX.writeFile(wb, `RTE_LORRAINE_STOCK.xlsx`);
-        }
-
-        function envoyerRapportMail() { window.location.href = `mailto:thierry.p057@gmail.com?subject=Rapport RTE LORRAINE&body=Budget réappro : ${document.getElementById('total-budget').innerText}.`; }
-        
         checkUser();
     </script>
 </body>
