@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTE EMASI LORRAINE - V3.4</title>
+    <title>RTE EMASI LORRAINE - V3.5</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -56,13 +56,13 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher ou scanné..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
-                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl">📷</button>
+                    <input id="search" oninput="chargerProduits()" type="text" placeholder="Rechercher..." class="flex-1 border p-5 rounded-[1.5rem] shadow-sm outline-none bg-white">
+                    <button onclick="toggleScanner()" class="bg-blue-600 text-white px-5 rounded-[1.5rem] shadow-lg text-xl" title="Scanner un code">📷</button>
                 </div>
 
                 <div id="scanner-container" class="hidden bg-white p-4 rounded-3xl border shadow-inner">
                     <div id="reader"></div>
-                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Arrêter le scan</button>
+                    <button onclick="toggleScanner()" class="w-full mt-4 text-[10px] font-black uppercase text-red-500">Annuler le scan</button>
                 </div>
                 
                 <button onclick="toggleForm()" class="w-full bg-blue-50 text-blue-700 p-5 rounded-[1.5rem] font-black text-sm uppercase italic border border-blue-100">+ Nouvel Article</button>
@@ -70,18 +70,18 @@
                 <div id="form-container" class="hidden bg-white p-6 rounded-[2rem] border shadow-2xl space-y-4">
                     <input id="edit-id" type="hidden">
                     <div class="flex justify-between items-center">
-                        <label id="form-title">Détails de l'article</label>
+                        <label class="text-blue-600 font-black">Fiche Article</label>
                         <button id="btn-delete" onclick="supprimerArticle()" class="hidden bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-red-100">🗑️ Supprimer</button>
                     </div>
-                    <div><input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
-                    <div><label>ID Code (Barre ou QR)</label><input id="barcode" type="text" placeholder="Code ID" class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase"></div>
+                    <div><label>Désignation</label><input id="nom" type="text" placeholder="Nom de l'article" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                    <div><label>ID Code (Auto-rempli par scan)</label><input id="barcode" type="text" placeholder="Scannez un code..." class="w-full border p-3 rounded-xl bg-slate-50 font-mono text-blue-600 uppercase outline-none"></div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label>Lieu</label><input id="emplacement" type="text" class="w-full border p-3 rounded-xl bg-slate-50"></div>
-                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50"></div>
+                        <div><label>Lieu</label><input id="emplacement" type="text" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                        <div><label>Quantité</label><input id="qty" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label>Prix (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50"></div>
-                        <div><label>Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50"></div>
+                        <div><label>Prix (€)</label><input id="prix" type="number" step="0.01" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
+                        <div><label>Alerte</label><input id="seuil" type="number" class="w-full border p-3 rounded-xl bg-slate-50 outline-none"></div>
                     </div>
                     <div class="flex gap-3 pt-2">
                         <button onclick="ajouterOuModifier()" class="flex-1 bg-blue-600 text-white p-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Enregistrer</button>
@@ -118,7 +118,7 @@
             const pseudo = document.getElementById('pseudo').value;
             const password = document.getElementById('password').value;
             const { data, error } = await sb.auth.signInWithPassword({ email: pseudo.toLowerCase() + "@emasi.stock", password });
-            if (error) alert("Accès refusé."); else checkUser();
+            if (error) alert("Identifiants incorrects."); else checkUser();
         }
         async function logout() { await sb.auth.signOut(); location.reload(); }
         async function checkUser() {
@@ -132,16 +132,16 @@
             }
         }
 
+        // --- SCANNER INTELLIGENT (V3.5) ---
         function toggleScanner() {
             const container = document.getElementById('scanner-container');
             if (container.classList.contains('hidden')) {
                 container.classList.remove('hidden');
                 html5QrCode = new Html5Qrcode("reader");
                 html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 280, height: 180 } },
-                    (decodedText) => {
-                        document.getElementById('search').value = decodedText;
-                        chargerProduits();
-                        toggleScanner();
+                    async (decodedText) => {
+                        toggleScanner(); // Ferme la caméra
+                        await traiterScan(decodedText);
                     }
                 ).catch(err => console.error(err));
             } else {
@@ -150,18 +150,31 @@
             }
         }
 
+        async function traiterScan(code) {
+            // 1. Chercher si le code existe déjà
+            const { data, error } = await sb.from('produits').select('*').eq('barcode', code).maybeSingle();
+            
+            if (data) {
+                // TROUVÉ : On ouvre la fiche pour modification
+                preparerEdition(data.id);
+            } else {
+                // INCONNU : On ouvre le formulaire "Ajout" et on pré-remplit le code
+                resetForm();
+                document.getElementById('barcode').value = code;
+                if(document.getElementById('form-container').classList.contains('hidden')) toggleForm();
+                alert("Nouveau code détecté : " + code + ". Remplissez le nom pour l'enregistrer.");
+            }
+        }
+
         async function supprimerArticle() {
             const id = document.getElementById('edit-id').value;
             const nom = document.getElementById('nom').value;
             if(!id) return;
             if(confirm(`Supprimer définitivement "${nom}" ?`)) {
-                const { error } = await sb.from('produits').delete().eq('id', id);
-                if(error) alert("Erreur : " + error.message);
-                else {
-                    await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "🗑️ SUPPRESSION", quantite_finale: 0 }]);
-                    toggleForm();
-                    chargerProduits();
-                }
+                await sb.from('produits').delete().eq('id', id);
+                await sb.from('historique').insert([{ produit_nom: nom, utilisateur: userPseudo, action: "🗑️ SUPPRESSION", quantite_finale: 0 }]);
+                toggleForm();
+                chargerProduits();
             }
         }
 
@@ -181,8 +194,8 @@
                         <p class="text-[9px] text-slate-400 font-mono mt-1">${p.barcode ? '🆔 ' + p.barcode : '⚠ Pas de code'}</p>
                         <div class="flex items-center justify-between mt-2">
                             <div class="flex gap-2">
-                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black">-</button>
-                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black">+</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite - 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black shadow-inner">-</button>
+                                <button onclick="updateQty('${p.id}', ${p.quantite + 1}, '${p.nom}')" class="bg-slate-100 w-10 h-10 rounded-xl font-black shadow-inner">+</button>
                             </div>
                             <span class="text-xl font-black">x${p.quantite}</span>
                         </div>
@@ -194,7 +207,7 @@
         async function ajouterOuModifier() {
             const id = document.getElementById('edit-id').value;
             const obj = { nom: document.getElementById('nom').value, barcode: document.getElementById('barcode').value, emplacement: document.getElementById('emplacement').value, quantite: parseInt(document.getElementById('qty').value) || 0, prix_unitaire: parseFloat(document.getElementById('prix').value) || 0, seuil_critique: parseInt(document.getElementById('seuil').value) || 0 };
-            if(!obj.nom) return alert("Nom obligatoire.");
+            if(!obj.nom) return alert("Le nom est obligatoire.");
             let res = id ? await sb.from('produits').update(obj).eq('id', id).select() : await sb.from('produits').insert([obj]).select();
             if(res.error) alert("Erreur : " + res.error.message); else { toggleForm(); chargerProduits(); }
         }
