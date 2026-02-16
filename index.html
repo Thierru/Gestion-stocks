@@ -1,278 +1,176 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EMASI STOCK V1.21</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-
-<style>
-body { font-family: Arial; margin:0; background:#f1f5f9; }
-header { background:#0f172a; color:white; padding:10px; text-align:center; }
-nav button { margin:5px; padding:8px 12px; }
-.tab { display:none; padding:15px; }
-.active { display:block; }
-.card {
-    background:white;
-    padding:15px;
-    margin:10px 0;
-    border-radius:10px;
-}
-.low { background:#fecaca; }
-img { max-width:100px; margin-top:10px; }
-button { cursor:pointer; }
-.modal {
-    position:fixed;
-    top:0; left:0;
-    width:100%; height:100%;
-    background:rgba(0,0,0,0.6);
-    display:none;
-    align-items:center;
-    justify-content:center;
-}
-.modal-content {
-    background:white;
-    padding:20px;
-    border-radius:10px;
-    width:90%;
-    max-width:500px;
-}
-</style>
-</head>
-
-<body>
-
-<header>
-<h2>📦 EMASI STOCK V1.21</h2>
-<button onclick="logout()">Déconnexion</button>
-</header>
-
-<!-- LOGIN -->
-<div id="login-section" class="active">
-    <h3>Connexion</h3>
-    <input id="pseudo" type="email" placeholder="Email"><br><br>
-    <input id="password" type="password" placeholder="Mot de passe"><br><br>
-    <button id="btn-login">Se connecter</button>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none">
-
-<nav>
-<button onclick="showTab('pieces')">Pièces</button>
-<button onclick="showTab('materiel')">Matériel</button>
-<button onclick="showTab('budget')">Budget</button>
-<button onclick="showTab('historique')">Historique</button>
-</nav>
-
-<div id="pieces" class="tab active"></div>
-<div id="materiel" class="tab"></div>
-<div id="budget" class="tab"></div>
-<div id="historique" class="tab"></div>
-
-</div>
-
-<!-- MODAL -->
-<div class="modal" id="editModal">
-<div class="modal-content">
-<h3>Modifier Article</h3>
-<input type="hidden" id="editId">
-Nom : <input id="editNom"><br><br>
-Quantité : <input type="number" id="editQuantite"><br><br>
-Seuil : <input type="number" id="editSeuil"><br><br>
-Prix : <input type="number" id="editPrix"><br><br>
-<button onclick="saveEdit()">💾 Enregistrer</button>
-<button onclick="deleteArticle()">🗑 Supprimer</button>
-<button onclick="closeModal()">❌ Fermer</button>
-</div>
-</div>
-
-<script defer>
-
-document.addEventListener("DOMContentLoaded", () => {
-
+<script>
 const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
 const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
 const sb = supabase.createClient(S_URL, S_KEY);
 
-let currentUser = null;
+let userPseudo = "";
+let html5QrCode;
 
-document.getElementById("btn-login").addEventListener("click", login);
+/* ===========================
+   AUTH (INCHANGÉ & STABLE)
+=========================== */
 
 async function login() {
     const p = document.getElementById('pseudo').value;
     const pw = document.getElementById('password').value;
-
-    if(!p || !pw){
-        alert("Remplir les champs");
-        return;
-    }
+    if(!p || !pw) return alert("Remplir les champs");
 
     const emailFinal = p.toLowerCase().trim() + "@emasi.stock";
 
-    const { data, error } = await sb.auth.signInWithPassword({
+    const { error } = await sb.auth.signInWithPassword({
         email: emailFinal,
         password: pw
     });
 
     if(error){
         alert("Identifiants incorrects.");
-        console.error(error);
         return;
     }
 
-    await checkUser(); // ⚠️ important
+    await checkUser();
 }
 
-
-    currentUser = data.user;
-    login-section.style.display = "none";
-    app.style.display = "block";
-    loadAll();
-}
-
-window.logout = async function(){
+async function logout() {
     await sb.auth.signOut();
     location.reload();
 }
 
-window.showTab = function(tab){
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    document.getElementById(tab).classList.add("active");
+async function checkUser() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) {
+        userPseudo = user.email.split('@')[0].toUpperCase();
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('btn-logout').classList.remove('hidden');
+        chargerDonnees();
+    }
 }
 
-async function loadAll(){
-    loadPieces();
-    loadMateriel();
-    loadHistorique();
-    loadBudget();
+/* ===========================
+   DATA
+=========================== */
+
+async function chargerDonnees() {
+    const { data } = await sb.from('produits').select('*').order('nom');
+    renderListes(data);
+    calculerBudget(data);
 }
 
-async function loadPieces(){
-    const { data } = await sb.from("pieces").select("*");
-    let html="";
+async function sauvegarder() {
+
+    const id = document.getElementById('edit-id').value;
+    const type = document.getElementById('edit-type').value;
+
+    const payload = {
+        nom: document.getElementById('nom').value.trim(),
+        barcode: document.getElementById('barcode').value.trim(),
+        emplacement: `${zone-1.value} - ${zone-2.value}`,
+        prix_unitaire: parseFloat(prix.value) || 0,
+        image_url: photo-url.value,
+        categorie: type,
+        quantite: type === 'PIECE' ? parseInt(qty.value) || 0 : 1,
+        seuil_critique: type === 'PIECE' ? parseInt(seuil.value) || 0 : 0,
+        etat: type === 'MATERIEL' ? etat-materiel.value : 'OK'
+    };
+
+    if(!payload.nom) return alert("Nom manquant");
+
+    if(id){
+        await sb.from('produits').update(payload).eq('id', id);
+        await logAction(payload.nom, "MODIFICATION");
+    } else {
+        await sb.from('produits').insert([payload]);
+        await logAction(payload.nom, "CREATION");
+    }
+
+    toggleForm();
+    chargerDonnees();
+}
+
+async function updateStock(id, diff, nom) {
+    const { data } = await sb.from('produits').select('quantite').eq('id', id).single();
+    const newQ = (data.quantite || 0) + diff;
+    if(newQ < 0) return;
+
+    await sb.from('produits').update({ quantite: newQ }).eq('id', id);
+    await logAction(nom, diff > 0 ? "AJOUT STOCK" : "SORTIE STOCK");
+    chargerDonnees();
+}
+
+/* ===========================
+   HISTORIQUE CENTRALISÉ
+=========================== */
+
+async function logAction(nom, action){
+    await sb.from('historique').insert([{
+        produit_nom: nom,
+        utilisateur: userPseudo,
+        action: action,
+        date_action: new Date()
+    }]);
+}
+
+async function chargerLogs(){
+    const { data } = await sb.from('historique')
+        .select('*')
+        .order('date_action',{ascending:false})
+        .limit(50);
+
+    document.getElementById('liste-logs').innerHTML =
+        data.map(l => `
+        <div class="p-4 text-[9px] uppercase font-black bg-white flex justify-between">
+            <div>${l.produit_nom}<br>
+            <span class="text-slate-300">${new Date(l.date_action).toLocaleString()}</span>
+            </div>
+            <div class="text-blue-600">${l.action}</div>
+        </div>
+    `).join('');
+}
+
+/* ===========================
+   SUPPRESSION SÉCURISÉE
+=========================== */
+
+async function supprimerArticle(){
+    const id = document.getElementById('edit-id').value;
+    const nom = document.getElementById('nom').value;
+
+    if(!confirm("⚠ Supprimer définitivement ?")) return;
+    if(!confirm("Cette action est irréversible. Confirmer ?")) return;
+
+    const url = photo-url.value;
+
+    if(url){
+        const fileName = url.split('/').pop();
+        await sb.storage.from('photos-stock').remove([fileName]);
+    }
+
+    await sb.from('produits').delete().eq('id', id);
+    await logAction(nom, "SUPPRESSION");
+
+    toggleForm();
+    chargerDonnees();
+}
+
+/* ===========================
+   BUDGET
+=========================== */
+
+function calculerBudget(data){
+    let total = 0;
+
     data.forEach(p=>{
-        html+=`
-        <div class="card ${p.quantite<=p.seuil ? 'low':''}">
-            <b>${p.nom}</b><br>
-            Quantité: ${p.quantite}<br>
-            Seuil: ${p.seuil}<br>
-            Prix: ${p.prix}€<br>
-            ${p.photo ? `<img src="${p.photo}">` : ""}
-            <br><br>
-            <button onclick="adjust(${p.id},1)">➕</button>
-            <button onclick="adjust(${p.id},-1)">➖</button>
-            <button onclick="openEdit(${p.id},'pieces')">✏️ Voir / Éditer</button>
-        </div>
-        `;
-    });
-    pieces.innerHTML=html;
-}
-
-async function loadMateriel(){
-    const { data } = await sb.from("materiel").select("*");
-    let html="";
-    data.forEach(m=>{
-        html+=`
-        <div class="card">
-            <b>${m.nom}</b><br>
-            Statut: ${m.statut}<br>
-            Prix: ${m.prix}€<br>
-            ${m.photo ? `<img src="${m.photo}">` : ""}
-            <br><br>
-            <button onclick="openEdit(${m.id},'materiel')">✏️ Voir / Éditer</button>
-        </div>
-        `;
-    });
-    materiel.innerHTML=html;
-}
-
-window.adjust = async function(id,delta){
-    const { data } = await sb.from("pieces").select("*").eq("id",id).single();
-    let newQ = data.quantite + delta;
-    await sb.from("pieces").update({ quantite:newQ }).eq("id",id);
-
-    await sb.from("historique").insert({
-        article:data.nom,
-        mouvement:delta>0?"Entrée":"Sortie",
-        quantite:Math.abs(delta),
-        utilisateur:currentUser.email
-    });
-
-    loadAll();
-}
-
-window.openEdit = async function(id,table){
-    const { data } = await sb.from(table).select("*").eq("id",id).single();
-    editId.value=id;
-    editNom.value=data.nom;
-    editQuantite.value=data.quantite || 0;
-    editSeuil.value=data.seuil || 0;
-    editPrix.value=data.prix || 0;
-    editModal.style.display="flex";
-    editModal.dataset.table=table;
-}
-
-window.closeModal = function(){
-    editModal.style.display="none";
-}
-
-window.saveEdit = async function(){
-    const table = editModal.dataset.table;
-    await sb.from(table).update({
-        nom:editNom.value,
-        quantite:Number(editQuantite.value),
-        seuil:Number(editSeuil.value),
-        prix:Number(editPrix.value)
-    }).eq("id",editId.value);
-    closeModal();
-    loadAll();
-}
-
-window.deleteArticle = async function(){
-    if(!confirm("Confirmer la suppression ?")) return;
-    const table = editModal.dataset.table;
-    await sb.from(table).delete().eq("id",editId.value);
-    closeModal();
-    loadAll();
-}
-
-async function loadHistorique(){
-    const { data } = await sb.from("historique").select("*").order("created_at",{ascending:false});
-    let html="";
-    data.forEach(h=>{
-        html+=`
-        <div class="card">
-            ${h.created_at}<br>
-            ${h.utilisateur} - ${h.mouvement} - ${h.article} (${h.quantite})
-        </div>
-        `;
-    });
-    historique.innerHTML=html;
-}
-
-async function loadBudget(){
-    const { data:piecesData } = await sb.from("pieces").select("*");
-    const { data:materielData } = await sb.from("materiel").select("*");
-
-    let total=0;
-    piecesData.forEach(p=>{
-        if(p.quantite<p.seuil){
-            total+=(p.seuil-p.quantite)*p.prix;
+        if(p.categorie === "MATERIEL" && p.etat === "HS"){
+            total += p.prix_unitaire;
+        }
+        if((p.categorie || "PIECE") === "PIECE" && p.quantite <= p.seuil_critique){
+            total += (p.seuil_critique - p.quantite) * p.prix_unitaire;
         }
     });
 
-    materielData.forEach(m=>{
-        if(m.statut==="HS"){
-            total+=m.prix;
-        }
-    });
-
-    budget.innerHTML=`<div class="card"><b>Total estimé :</b> ${total} €</div>`;
+    total-budget.innerText =
+        total.toLocaleString('fr-FR',{minimumFractionDigits:2}) + " €";
 }
 
-});
+checkUser();
 </script>
-</body>
-</html>
