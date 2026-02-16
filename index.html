@@ -3,99 +3,80 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RTE EMASI - V1.40</title>
+<title>RTE EMASI V2.00 PRO</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 </head>
+
 <body class="bg-gray-100">
 
-<!-- LOGIN -->
+<!-- ================= LOGIN ================= -->
+
 <div id="login-section" class="flex items-center justify-center h-screen">
     <div class="bg-white p-8 rounded shadow w-80">
-        <h2 class="text-2xl font-bold mb-4 text-center">RTE EMASI V1.40</h2>
-        <input id="pseudo" placeholder="Pseudo"
-            class="border p-2 w-full mb-3">
-        <input id="password" type="password" placeholder="Mot de passe"
-            class="border p-2 w-full mb-4">
-        <button onclick="login()" 
-            class="bg-blue-600 text-white w-full p-2 rounded">
+        <h2 class="text-2xl font-bold mb-4 text-center">RTE EMASI V2.00 PRO</h2>
+        <input id="pseudo" placeholder="Pseudo" class="border p-2 w-full mb-3">
+        <input id="password" type="password" placeholder="Mot de passe" class="border p-2 w-full mb-4">
+        <button onclick="login()" class="bg-blue-600 text-white w-full p-2 rounded">
             Connexion
         </button>
     </div>
 </div>
 
-<!-- APP -->
+<!-- ================= APP ================= -->
+
 <div id="main-app" class="hidden p-6">
 
-    <div class="flex justify-between mb-6">
-        <h1 class="text-2xl font-bold">Gestion Stock EMASI</h1>
-        <button onclick="logout()" 
-            class="bg-red-600 text-white px-4 py-2 rounded">
-            Déconnexion
-        </button>
-    </div>
+<div class="flex justify-between mb-6">
+    <h1 class="text-2xl font-bold">Gestion Stock EMASI</h1>
+    <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded">
+        Déconnexion
+    </button>
+</div>
 
-    <!-- Recherche -->
-    <input id="search" onkeyup="rechercher()"
-        placeholder="Recherche article..."
-        class="border p-2 w-full mb-4">
+<!-- TABS -->
+<div class="flex gap-4 mb-6">
+    <button onclick="showTab('pieces')" class="tab-btn">📦 Pièces</button>
+    <button onclick="showTab('materiels')" class="tab-btn">🛠 Matériels</button>
+    <button onclick="showTab('historique')" class="tab-btn">📜 Historique</button>
+    <button onclick="showTab('budget')" class="tab-btn">💰 Budget</button>
+    <button onclick="showTab('admin')" class="tab-btn">⚙ Admin</button>
+</div>
 
-    <!-- Import / Export -->
-    <div class="flex gap-4 mb-6">
-        <button onclick="exportCSV()" 
-            class="bg-blue-600 text-white px-4 py-2 rounded">
-            Export CSV
-        </button>
-        <input type="file" onchange="importCSV(event)">
-    </div>
+<!-- CONTENT -->
 
-    <!-- Stats -->
-    <div id="stats" class="mb-6"></div>
-    <canvas id="graph" width="800" height="200"
-        class="bg-white shadow mb-6"></canvas>
-
-    <!-- Budget -->
-    <div class="bg-white p-4 shadow mb-6">
-        <h3 class="font-bold">Budget estimé réapprovisionnement :</h3>
-        <div id="total-budget" class="text-xl font-black text-red-600"></div>
-    </div>
-
-    <!-- Liste -->
-    <div id="liste-produits" class="grid gap-4"></div>
+<div id="pieces" class="tab-content"></div>
+<div id="materiels" class="tab-content hidden"></div>
+<div id="historique" class="tab-content hidden"></div>
+<div id="budget" class="tab-content hidden"></div>
+<div id="admin" class="tab-content hidden"></div>
 
 </div>
 
 <script>
-const VERSION = "V1.40";
 const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
 const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
 const sb = supabase.createClient(S_URL, S_KEY);
 
-let userPseudo = "";
-let allProduits = [];
+let userPseudo="";
+let produits=[];
 
 /* ================= AUTH ================= */
 
-async function login() {
-    const p = document.getElementById('pseudo').value;
-    const pw = document.getElementById('password').value;
-    if(!p || !pw) return alert("Remplir les champs");
+async function login(){
+    const p=document.getElementById('pseudo').value;
+    const pw=document.getElementById('password').value;
+    if(!p||!pw) return alert("Champs requis");
 
-    const emailFinal = p.toLowerCase().trim() + "@emasi.stock";
-
-    const { error } = await sb.auth.signInWithPassword({
-        email: emailFinal,
-        password: pw
+    const { error }=await sb.auth.signInWithPassword({
+        email:p.toLowerCase().trim()+"@emasi.stock",
+        password:pw
     });
 
-    if(error){
-        alert("Identifiants incorrects");
-        return;
-    }
+    if(error) return alert("Erreur connexion");
 
-    await checkUser();
+    checkUser();
 }
 
 async function logout(){
@@ -104,155 +85,191 @@ async function logout(){
 }
 
 async function checkUser(){
-    const { data:{ user } } = await sb.auth.getUser();
+    const { data:{ user }}=await sb.auth.getUser();
     if(user){
-        userPseudo = user.email.split('@')[0].toUpperCase();
-        document.getElementById('login-section').style.display='none';
-        document.getElementById('main-app').classList.remove('hidden');
-        chargerDonnees();
+        userPseudo=user.email.split('@')[0].toUpperCase();
+        document.getElementById("login-section").style.display="none";
+        document.getElementById("main-app").classList.remove("hidden");
+        loadData();
     }
 }
 
-/* ================= DATA ================= */
+/* ================= LOAD ================= */
 
-async function chargerDonnees(){
-    const { data } = await sb.from('produits').select('*').order('nom');
-    allProduits = data || [];
-    renderListes(allProduits);
-    calculerBudget(allProduits);
-    renderStats();
+async function loadData(){
+    const { data }=await sb.from('produits').select('*').order('nom');
+    produits=data||[];
+    renderPieces();
+    renderMateriels();
+    renderBudget();
 }
 
-function renderListes(data){
-    const container = document.getElementById('liste-produits');
-    container.innerHTML="";
+/* ================= TABS ================= */
 
-    data.forEach(p=>{
-        const card = document.createElement('div');
-        card.className="bg-white p-4 shadow rounded";
+function showTab(tab){
+    document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
+    document.getElementById(tab).classList.remove('hidden');
+}
 
-        card.innerHTML=`
-            <div class="flex justify-between">
-                <div>
-                    <div class="font-bold">${p.nom}</div>
-                    <div class="text-sm text-gray-500">${p.barcode||''}</div>
-                </div>
-                <div class="text-right">
-                    <div>Qté : ${p.quantite||1}</div>
-                    <div>${(p.prix_unitaire||0).toFixed(2)} €</div>
-                </div>
-            </div>
-        `;
+/* ================= PIECES ================= */
 
-        container.appendChild(card);
+function renderPieces(){
+    const container=document.getElementById("pieces");
+    container.innerHTML="<h2 class='text-xl font-bold mb-4'>Pièces</h2>";
+
+    produits.filter(p=>p.categorie==="PIECE").forEach(p=>{
+        container.innerHTML+=cardProduit(p,true);
     });
 }
 
-/* ================= RECHERCHE ================= */
+/* ================= MATERIEL ================= */
 
-function rechercher(){
-    const s = document.getElementById('search').value.toLowerCase();
-    const filtered = allProduits.filter(p =>
-        p.nom.toLowerCase().includes(s) ||
-        (p.barcode||'').toLowerCase().includes(s)
-    );
-    renderListes(filtered);
+function renderMateriels(){
+    const container=document.getElementById("materiels");
+    container.innerHTML="<h2 class='text-xl font-bold mb-4'>Matériels</h2>";
+
+    produits.filter(p=>p.categorie==="MATERIEL").forEach(p=>{
+        container.innerHTML+=cardProduit(p,false);
+    });
+}
+
+/* ================= CARD ================= */
+
+function cardProduit(p,isPiece){
+    return `
+    <div class="bg-white p-4 shadow mb-4 rounded">
+        <div class="flex justify-between">
+            <div>
+                <div class="font-bold">${p.nom}</div>
+                <div class="text-sm text-gray-500">${p.barcode||''}</div>
+            </div>
+            <div class="text-right">
+                ${isPiece ? `
+                <button onclick="updateQuantite('${p.id}',1)">+</button>
+                ${p.quantite}
+                <button onclick="updateQuantite('${p.id}',-1)">-</button>
+                `:
+                `Etat: ${p.etat||'OK'}`
+                }
+            </div>
+        </div>
+        <div class="mt-2 flex justify-between">
+            <span>${(p.prix_unitaire||0).toFixed(2)} €</span>
+            <button onclick="deleteProduit('${p.id}','${p.nom}')"
+                class="text-red-600 text-sm">
+                Supprimer
+            </button>
+        </div>
+    </div>`;
+}
+
+/* ================= UPDATE QTE ================= */
+
+async function updateQuantite(id,delta){
+    const p=produits.find(x=>x.id===id);
+    const newQ=p.quantite+delta;
+    if(newQ<0) return;
+
+    await sb.from('produits').update({quantite:newQ}).eq('id',id);
+    await logAction(p.nom, delta>0?"Entrée":"Sortie");
+    loadData();
+}
+
+/* ================= DELETE ================= */
+
+async function deleteProduit(id,nom){
+    if(!confirm("Supprimer "+nom+" ?")) return;
+
+    await sb.from('produits').delete().eq('id',id);
+    await logAction(nom,"Suppression");
+    loadData();
+}
+
+/* ================= HISTORIQUE ================= */
+
+async function renderHistorique(){
+    const { data }=await sb.from('historique').select('*').order('date_action',{ascending:false});
+    const container=document.getElementById("historique");
+    container.innerHTML="<h2 class='text-xl font-bold mb-4'>Historique</h2>";
+
+    data.forEach(h=>{
+        container.innerHTML+=`
+        <div class="bg-white p-3 shadow mb-2 text-sm">
+            ${h.date_action.substring(0,16)} |
+            <b>${h.utilisateur}</b> |
+            ${h.produit_nom} |
+            ${h.action}
+        </div>`;
+    });
 }
 
 /* ================= BUDGET ================= */
 
-function calculerBudget(data){
+function renderBudget(){
     let total=0;
-
-    data.forEach(p=>{
-        if(p.categorie==="MATERIEL" && p.etat==="HS"){
+    produits.forEach(p=>{
+        if(p.categorie==="MATERIEL" && p.etat==="HS")
             total+=p.prix_unitaire||0;
-        }
-        if((p.categorie||"PIECE")==="PIECE" && p.quantite<=p.seuil_critique){
-            total+=((p.seuil_critique||0)-(p.quantite||0))*(p.prix_unitaire||0);
-        }
+        if(p.categorie==="PIECE" && p.quantite<=p.seuil_critique)
+            total+=((p.seuil_critique-p.quantite)*(p.prix_unitaire||0));
     });
 
-    document.getElementById('total-budget').innerText=
-        total.toLocaleString('fr-FR',{minimumFractionDigits:2})+" €";
+    document.getElementById("budget").innerHTML=`
+        <h2 class="text-xl font-bold mb-4">Budget estimé</h2>
+        <div class="bg-white p-6 shadow text-2xl font-black text-red-600">
+            ${total.toFixed(2)} €
+        </div>`;
 }
 
-/* ================= STATS ================= */
+/* ================= ADMIN ================= */
 
-function renderStats(){
-    const totalArticles=allProduits.length;
-    const valeur=allProduits.reduce((s,p)=>s+((p.quantite||1)*(p.prix_unitaire||0)),0);
-
-    document.getElementById('stats').innerHTML=`
-        <div class="grid grid-cols-2 gap-4 text-center">
-            <div class="bg-white p-4 shadow">
-                Articles<br><b>${totalArticles}</b>
-            </div>
-            <div class="bg-white p-4 shadow">
-                Valeur stock<br><b>${valeur.toFixed(2)} €</b>
-            </div>
-        </div>
-    `;
-
-    renderGraph();
+function renderAdmin(){
+    document.getElementById("admin").innerHTML=`
+    <h2 class="text-xl font-bold mb-4">Ajouter Article</h2>
+    <div class="bg-white p-4 shadow space-y-2">
+        <input id="new-nom" placeholder="Nom" class="border p-2 w-full">
+        <select id="new-cat" class="border p-2 w-full">
+            <option value="PIECE">PIECE</option>
+            <option value="MATERIEL">MATERIEL</option>
+        </select>
+        <input id="new-qte" type="number" placeholder="Quantité" class="border p-2 w-full">
+        <input id="new-prix" type="number" placeholder="Prix" class="border p-2 w-full">
+        <button onclick="addProduit()" class="bg-green-600 text-white p-2 w-full">
+            Ajouter
+        </button>
+    </div>`;
 }
 
-function renderGraph(){
-    const canvas=document.getElementById("graph");
-    const ctx=canvas.getContext("2d");
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+async function addProduit(){
+    const nom=document.getElementById("new-nom").value;
+    const cat=document.getElementById("new-cat").value;
+    const qte=parseInt(document.getElementById("new-qte").value)||0;
+    const prix=parseFloat(document.getElementById("new-prix").value)||0;
 
-    const max=Math.max(...allProduits.map(p=>p.quantite||1),1);
-
-    allProduits.slice(0,10).forEach((p,i)=>{
-        const h=((p.quantite||1)/max)*150;
-        ctx.fillRect(i*70+40,180-h,40,h);
-    });
+    await sb.from('produits').insert([{nom,categorie:cat,quantite:qte,prix_unitaire:prix}]);
+    await logAction(nom,"Création");
+    loadData();
 }
 
-/* ================= CSV ================= */
+/* ================= LOG ================= */
 
-function exportCSV(){
-    if(!allProduits.length) return alert("Aucune donnée");
-
-    let csv="Nom;Code;Categorie;Quantite;Prix\n";
-    allProduits.forEach(p=>{
-        csv+=`${p.nom};${p.barcode||''};${p.categorie||''};${p.quantite||1};${p.prix_unitaire||0}\n`;
-    });
-
-    const blob=new Blob([csv],{type:'text/csv'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download="stock_export.csv";
-    a.click();
+async function logAction(nom,action){
+    await sb.from('historique').insert([{
+        produit_nom:nom,
+        utilisateur:userPseudo,
+        action:action,
+        date_action:new Date()
+    }]);
 }
-
-async function importCSV(e){
-    const file=e.target.files[0];
-    if(!file) return;
-    const text=await file.text();
-    const rows=text.split("\n").slice(1);
-
-    for(const r of rows){
-        const c=r.split(";");
-        if(c.length<5) continue;
-        await sb.from('produits').insert([{
-            nom:c[0],
-            barcode:c[1],
-            categorie:c[2],
-            quantite:parseInt(c[3])||0,
-            prix_unitaire:parseFloat(c[4])||0
-        }]);
-    }
-
-    alert("Import terminé");
-    chargerDonnees();
-}
-
-/* ================= INIT ================= */
 
 checkUser();
+renderHistorique();
+renderAdmin();
 </script>
+
+<style>
+.tab-btn{background:#1e3a8a;color:white;padding:8px 12px;border-radius:6px;}
+</style>
 
 </body>
 </html>
