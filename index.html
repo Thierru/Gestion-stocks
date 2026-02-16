@@ -3,273 +3,301 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RTE EMASI V2.00 PRO</title>
+<title>EMASI STOCK V2.10 PRO</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/browser-image-compression/2.0.2/browser-image-compression.min.js"></script>
+
+<style>
+body { font-family: Inter, sans-serif; }
+.tab { display:none; }
+.tab.active { display:block; }
+.alert-center{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+z-index:999;
+}
+</style>
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-slate-100 pb-32">
 
-<!-- ================= LOGIN ================= -->
+<div class="max-w-xl mx-auto p-4">
 
-<div id="login-section" class="flex items-center justify-center h-screen">
-    <div class="bg-white p-8 rounded shadow w-80">
-        <h2 class="text-2xl font-bold mb-4 text-center">RTE EMASI V2.00 PRO</h2>
-        <input id="pseudo" placeholder="Pseudo" class="border p-2 w-full mb-3">
-        <input id="password" type="password" placeholder="Mot de passe" class="border p-2 w-full mb-4">
-        <button onclick="login()" class="bg-blue-600 text-white w-full p-2 rounded">
-            Connexion
-        </button>
-    </div>
+<h1 class="text-2xl font-black text-blue-800 mb-4">
+EMASI STOCK V2.10 PRO
+</h1>
+
+<!-- LOGIN -->
+<div id="login-section" class="bg-white p-6 rounded-3xl shadow">
+<input id="pseudo" placeholder="Identifiant" class="w-full mb-3 p-3 rounded-xl bg-slate-100">
+<input id="password" type="password" placeholder="Mot de passe" class="w-full mb-3 p-3 rounded-xl bg-slate-100">
+<button onclick="login()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold">Connexion</button>
 </div>
 
-<!-- ================= APP ================= -->
+<!-- APP -->
+<div id="app" class="hidden">
 
-<div id="main-app" class="hidden p-6">
-
-<div class="flex justify-between mb-6">
-    <h1 class="text-2xl font-bold">Gestion Stock EMASI</h1>
-    <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded">
-        Déconnexion
-    </button>
+<!-- NAV -->
+<div class="flex justify-between mb-4 text-xs font-bold">
+<button onclick="showTab('pieces')">📦 Pièces</button>
+<button onclick="showTab('materiel')">🛠 Matériel</button>
+<button onclick="showTab('budget')">💰 Budget</button>
+<button onclick="showTab('historique')">📜 Logs</button>
+<button onclick="showTab('admin')">⚙ Admin</button>
 </div>
 
-<!-- TABS -->
-<div class="flex gap-4 mb-6">
-    <button onclick="showTab('pieces')" class="tab-btn">📦 Pièces</button>
-    <button onclick="showTab('materiels')" class="tab-btn">🛠 Matériels</button>
-    <button onclick="showTab('historique')" class="tab-btn">📜 Historique</button>
-    <button onclick="showTab('budget')" class="tab-btn">💰 Budget</button>
-    <button onclick="showTab('admin')" class="tab-btn">⚙ Admin</button>
+<!-- PIECES -->
+<div id="pieces" class="tab active">
+<button onclick="startScanner()" class="bg-blue-600 text-white w-full p-3 rounded-xl mb-3">
+Scanner QR / Code Barre
+</button>
+
+<div id="reader" class="hidden mb-4"></div>
+
+<input id="p_nom" placeholder="Nom" class="w-full mb-2 p-3 rounded-xl bg-white">
+<input id="p_barcode" placeholder="Code barre" class="w-full mb-2 p-3 rounded-xl bg-white">
+<input id="p_prix" type="number" placeholder="Prix" class="w-full mb-2 p-3 rounded-xl bg-white">
+<input id="p_qty" type="number" placeholder="Quantité" class="w-full mb-2 p-3 rounded-xl bg-white">
+<input id="p_seuil" type="number" placeholder="Seuil alerte" class="w-full mb-2 p-3 rounded-xl bg-white">
+
+<input type="file" id="p_photo" accept="image/*" class="mb-3">
+
+<button onclick="ajouterPiece()" class="bg-green-600 text-white w-full p-3 rounded-xl font-bold">
+Ajouter / Mettre à jour
+</button>
+
+<div id="liste-pieces" class="mt-4 space-y-2"></div>
 </div>
 
-<!-- CONTENT -->
+<!-- MATERIEL -->
+<div id="materiel" class="tab">
+<input id="m_nom" placeholder="Nom" class="w-full mb-2 p-3 rounded-xl bg-white">
+<input id="m_prix" type="number" placeholder="Prix" class="w-full mb-2 p-3 rounded-xl bg-white">
+<input id="m_qty" type="number" placeholder="Quantité" class="w-full mb-2 p-3 rounded-xl bg-white">
+<select id="m_etat" class="w-full mb-3 p-3 rounded-xl bg-white">
+<option value="OK">OK</option>
+<option value="HS">HS</option>
+<option value="CO">Étalonnage</option>
+</select>
+<button onclick="ajouterMateriel()" class="bg-green-600 text-white w-full p-3 rounded-xl font-bold">
+Ajouter matériel
+</button>
+<div id="liste-materiel" class="mt-4 space-y-2"></div>
+</div>
 
-<div id="pieces" class="tab-content"></div>
-<div id="materiels" class="tab-content hidden"></div>
-<div id="historique" class="tab-content hidden"></div>
-<div id="budget" class="tab-content hidden"></div>
-<div id="admin" class="tab-content hidden"></div>
+<!-- BUDGET -->
+<div id="budget" class="tab">
+<h2 class="text-xl font-bold mb-3">Budget estimé</h2>
+<div id="total-budget" class="text-3xl font-black text-red-600">0 €</div>
+</div>
 
+<!-- HISTORIQUE -->
+<div id="historique" class="tab">
+<div id="liste-logs" class="space-y-2"></div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="tab space-y-3">
+<button onclick="exportCSV()" class="bg-blue-600 text-white w-full p-3 rounded-xl">
+Exporter CSV
+</button>
+<input type="file" id="import-file" class="w-full">
+<button onclick="importCSV()" class="bg-green-600 text-white w-full p-3 rounded-xl">
+Importer CSV
+</button>
+</div>
+
+</div>
 </div>
 
 <script>
-const S_URL = "https://lluihawrhoajckrgvakv.supabase.co";
-const S_KEY = "sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P";
-const sb = supabase.createClient(S_URL, S_KEY);
+const sb = supabase.createClient(
+"https://lluihawrhoajckrgvakv.supabase.co",
+"sb_publishable_myjqiXhb_Iv1c2rOWzw3Kg_cTb8F86P"
+);
 
 let userPseudo="";
-let produits=[];
+let scanner;
 
-/* ================= AUTH ================= */
-
+/* AUTH */
 async function login(){
-    const p=document.getElementById('pseudo').value;
-    const pw=document.getElementById('password').value;
-    if(!p||!pw) return alert("Champs requis");
-
-    const { error }=await sb.auth.signInWithPassword({
-        email:p.toLowerCase().trim()+"@emasi.stock",
-        password:pw
-    });
-
-    if(error) return alert("Erreur connexion");
-
-    checkUser();
+const p=document.getElementById("pseudo").value;
+const pw=document.getElementById("password").value;
+const {error}=await sb.auth.signInWithPassword({
+email:p+"@emasi.stock",
+password:pw
+});
+if(error) return alert("Erreur connexion");
+document.getElementById("login-section").classList.add("hidden");
+document.getElementById("app").classList.remove("hidden");
+userPseudo=p.toUpperCase();
+loadAll();
 }
 
-async function logout(){
-    await sb.auth.signOut();
-    location.reload();
+/* NAV */
+function showTab(id){
+document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+if(id==="historique") loadHistorique();
+if(id==="budget") loadBudget();
 }
 
-async function checkUser(){
-    const { data:{ user }}=await sb.auth.getUser();
-    if(user){
-        userPseudo=user.email.split('@')[0].toUpperCase();
-        document.getElementById("login-section").style.display="none";
-        document.getElementById("main-app").classList.remove("hidden");
-        loadData();
-    }
+/* SCANNER */
+function startScanner(){
+document.getElementById("reader").classList.remove("hidden");
+scanner=new Html5Qrcode("reader");
+scanner.start({facingMode:"environment"},{fps:10}, async code=>{
+scanner.stop();
+document.getElementById("reader").classList.add("hidden");
+document.getElementById("p_barcode").value=code;
+checkBarcode(code);
+});
 }
 
-/* ================= LOAD ================= */
-
-async function loadData(){
-    const { data }=await sb.from('produits').select('*').order('nom');
-    produits=data||[];
-    renderPieces();
-    renderMateriels();
-    renderBudget();
+async function checkBarcode(code){
+const {data}=await sb.from("produits").select("*").eq("barcode",code).maybeSingle();
+if(data){
+showAlert("Article trouvé",true);
+}else{
+showAlert("Article non trouvé",false);
+}
 }
 
-/* ================= TABS ================= */
-
-function showTab(tab){
-    document.querySelectorAll('.tab-content').forEach(el=>el.classList.add('hidden'));
-    document.getElementById(tab).classList.remove('hidden');
+function showAlert(msg,ok){
+const d=document.createElement("div");
+d.className="alert-center bg-white p-6 rounded-3xl shadow text-xl font-bold "+(ok?"text-green-600":"text-red-600");
+d.innerText=msg;
+document.body.appendChild(d);
+setTimeout(()=>d.remove(),2000);
 }
 
-/* ================= PIECES ================= */
-
-function renderPieces(){
-    const container=document.getElementById("pieces");
-    container.innerHTML="<h2 class='text-xl font-bold mb-4'>Pièces</h2>";
-
-    produits.filter(p=>p.categorie==="PIECE").forEach(p=>{
-        container.innerHTML+=cardProduit(p,true);
-    });
+/* PHOTO COMPRESSION */
+async function uploadPhoto(file){
+const compressed=await imageCompression(file,{maxSizeMB:0.3,maxWidthOrHeight:1280});
+const name="p_"+Date.now()+".jpg";
+await sb.storage.from("photos-stock").upload(name,compressed);
+return sb.storage.from("photos-stock").getPublicUrl(name).data.publicUrl;
 }
 
-/* ================= MATERIEL ================= */
+/* PIECE */
+async function ajouterPiece(){
+let imageUrl="";
+const file=document.getElementById("p_photo").files[0];
+if(file) imageUrl=await uploadPhoto(file);
 
-function renderMateriels(){
-    const container=document.getElementById("materiels");
-    container.innerHTML="<h2 class='text-xl font-bold mb-4'>Matériels</h2>";
+await sb.from("produits").upsert([{
+nom:p_nom.value,
+barcode:p_barcode.value,
+categorie:"PIECE",
+quantite:parseInt(p_qty.value||0),
+seuil_critique:parseInt(p_seuil.value||0),
+prix_unitaire:parseFloat(p_prix.value||0),
+image_url:imageUrl,
+etat:"OK"
+}]);
 
-    produits.filter(p=>p.categorie==="MATERIEL").forEach(p=>{
-        container.innerHTML+=cardProduit(p,false);
-    });
+loadAll();
 }
 
-/* ================= CARD ================= */
-
-function cardProduit(p,isPiece){
-    return `
-    <div class="bg-white p-4 shadow mb-4 rounded">
-        <div class="flex justify-between">
-            <div>
-                <div class="font-bold">${p.nom}</div>
-                <div class="text-sm text-gray-500">${p.barcode||''}</div>
-            </div>
-            <div class="text-right">
-                ${isPiece ? `
-                <button onclick="updateQuantite('${p.id}',1)">+</button>
-                ${p.quantite}
-                <button onclick="updateQuantite('${p.id}',-1)">-</button>
-                `:
-                `Etat: ${p.etat||'OK'}`
-                }
-            </div>
-        </div>
-        <div class="mt-2 flex justify-between">
-            <span>${(p.prix_unitaire||0).toFixed(2)} €</span>
-            <button onclick="deleteProduit('${p.id}','${p.nom}')"
-                class="text-red-600 text-sm">
-                Supprimer
-            </button>
-        </div>
-    </div>`;
+/* MATERIEL */
+async function ajouterMateriel(){
+await sb.from("produits").insert([{
+nom:m_nom.value,
+categorie:"MATERIEL",
+quantite:parseInt(m_qty.value||1),
+prix_unitaire:parseFloat(m_prix.value||0),
+etat:m_etat.value
+}]);
+loadAll();
 }
 
-/* ================= UPDATE QTE ================= */
-
-async function updateQuantite(id,delta){
-    const p=produits.find(x=>x.id===id);
-    const newQ=p.quantite+delta;
-    if(newQ<0) return;
-
-    await sb.from('produits').update({quantite:newQ}).eq('id',id);
-    await logAction(p.nom, delta>0?"Entrée":"Sortie");
-    loadData();
+/* LOAD DATA */
+async function loadAll(){
+const {data}=await sb.from("produits").select("*");
+renderPieces(data);
+renderMateriel(data);
+loadBudget();
+loadHistorique();
 }
 
-/* ================= DELETE ================= */
-
-async function deleteProduit(id,nom){
-    if(!confirm("Supprimer "+nom+" ?")) return;
-
-    await sb.from('produits').delete().eq('id',id);
-    await logAction(nom,"Suppression");
-    loadData();
+function renderPieces(data){
+const list=data.filter(p=>p.categorie==="PIECE");
+liste-pieces.innerHTML=list.map(p=>
+`<div class="bg-white p-3 rounded-xl shadow flex justify-between">
+<div>${p.nom}<br><span class="text-xs">Qté: ${p.quantite}</span></div>
+</div>`).join("");
 }
 
-/* ================= HISTORIQUE ================= */
-
-async function renderHistorique(){
-    const { data }=await sb.from('historique').select('*').order('date_action',{ascending:false});
-    const container=document.getElementById("historique");
-    container.innerHTML="<h2 class='text-xl font-bold mb-4'>Historique</h2>";
-
-    data.forEach(h=>{
-        container.innerHTML+=`
-        <div class="bg-white p-3 shadow mb-2 text-sm">
-            ${h.date_action.substring(0,16)} |
-            <b>${h.utilisateur}</b> |
-            ${h.produit_nom} |
-            ${h.action}
-        </div>`;
-    });
+function renderMateriel(data){
+const list=data.filter(p=>p.categorie==="MATERIEL");
+liste-materiel.innerHTML=list.map(p=>
+`<div class="bg-white p-3 rounded-xl shadow flex justify-between">
+<div>${p.nom}<br><span class="text-xs">${p.etat}</span></div>
+</div>`).join("");
 }
 
-/* ================= BUDGET ================= */
-
-function renderBudget(){
-    let total=0;
-    produits.forEach(p=>{
-        if(p.categorie==="MATERIEL" && p.etat==="HS")
-            total+=p.prix_unitaire||0;
-        if(p.categorie==="PIECE" && p.quantite<=p.seuil_critique)
-            total+=((p.seuil_critique-p.quantite)*(p.prix_unitaire||0));
-    });
-
-    document.getElementById("budget").innerHTML=`
-        <h2 class="text-xl font-bold mb-4">Budget estimé</h2>
-        <div class="bg-white p-6 shadow text-2xl font-black text-red-600">
-            ${total.toFixed(2)} €
-        </div>`;
+/* BUDGET */
+async function loadBudget(){
+const {data}=await sb.from("produits").select("*");
+let total=0;
+data.forEach(p=>{
+if(p.categorie==="PIECE" && p.quantite<=p.seuil_critique){
+total+=p.prix_unitaire*(p.seuil_critique-p.quantite);
+}
+if(p.categorie==="MATERIEL" && p.etat==="HS"){
+total+=p.prix_unitaire;
+}
+});
+document.getElementById("total-budget").innerText=total+" €";
 }
 
-/* ================= ADMIN ================= */
-
-function renderAdmin(){
-    document.getElementById("admin").innerHTML=`
-    <h2 class="text-xl font-bold mb-4">Ajouter Article</h2>
-    <div class="bg-white p-4 shadow space-y-2">
-        <input id="new-nom" placeholder="Nom" class="border p-2 w-full">
-        <select id="new-cat" class="border p-2 w-full">
-            <option value="PIECE">PIECE</option>
-            <option value="MATERIEL">MATERIEL</option>
-        </select>
-        <input id="new-qte" type="number" placeholder="Quantité" class="border p-2 w-full">
-        <input id="new-prix" type="number" placeholder="Prix" class="border p-2 w-full">
-        <button onclick="addProduit()" class="bg-green-600 text-white p-2 w-full">
-            Ajouter
-        </button>
-    </div>`;
+/* HISTORIQUE */
+async function loadHistorique(){
+const {data}=await sb.from("historique").select("*").order("date_action",{ascending:false}).limit(20);
+liste-logs.innerHTML=data.map(l=>
+`<div class="bg-white p-2 rounded-xl text-xs">
+${l.produit_nom} - ${l.action}
+</div>`).join("");
 }
 
-async function addProduit(){
-    const nom=document.getElementById("new-nom").value;
-    const cat=document.getElementById("new-cat").value;
-    const qte=parseInt(document.getElementById("new-qte").value)||0;
-    const prix=parseFloat(document.getElementById("new-prix").value)||0;
-
-    await sb.from('produits').insert([{nom,categorie:cat,quantite:qte,prix_unitaire:prix}]);
-    await logAction(nom,"Création");
-    loadData();
+/* ADMIN */
+async function exportCSV(){
+const {data}=await sb.from("produits").select("*");
+let csv="nom,barcode,categorie,quantite,seuil,prix,etat\n";
+data.forEach(p=>{
+csv+=`${p.nom},${p.barcode},${p.categorie},${p.quantite},${p.seuil_critique},${p.prix_unitaire},${p.etat}\n`;
+});
+const blob=new Blob([csv]);
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="export.csv";
+a.click();
 }
 
-/* ================= LOG ================= */
-
-async function logAction(nom,action){
-    await sb.from('historique').insert([{
-        produit_nom:nom,
-        utilisateur:userPseudo,
-        action:action,
-        date_action:new Date()
-    }]);
+async function importCSV(){
+const file=document.getElementById("import-file").files[0];
+const text=await file.text();
+const rows=text.split("\n").slice(1);
+rows.forEach(async r=>{
+const c=r.split(",");
+await sb.from("produits").upsert([{
+nom:c[0],
+barcode:c[1],
+categorie:c[2],
+quantite:parseInt(c[3]),
+seuil_critique:parseInt(c[4]),
+prix_unitaire:parseFloat(c[5]),
+etat:c[6]
+}]);
+});
+alert("Import terminé");
 }
-
-checkUser();
-renderHistorique();
-renderAdmin();
 </script>
-
-<style>
-.tab-btn{background:#1e3a8a;color:white;padding:8px 12px;border-radius:6px;}
-</style>
 
 </body>
 </html>
