@@ -126,18 +126,34 @@ let scanner;
 
 /* AUTH */
 async function login(){
-const p=document.getElementById("pseudo").value;
-const pw=document.getElementById("password").value;
-const {error}=await sb.auth.signInWithPassword({
-email:p+"@emasi.stock",
-password:pw
-});
-if(error) return alert("Erreur connexion");
-document.getElementById("login-section").classList.add("hidden");
-document.getElementById("app").classList.remove("hidden");
-userPseudo=p.toUpperCase();
-loadAll();
+
+    const p = document.getElementById("pseudo").value.trim().toLowerCase();
+    const pw = document.getElementById("password").value;
+
+    if(!p || !pw){
+        alert("Remplir les champs");
+        return;
+    }
+
+    const { data, error } = await sb.auth.signInWithPassword({
+        email: p + "@emasi.stock",
+        password: pw
+    });
+
+    if(error){
+        console.error(error);
+        alert("Identifiants incorrects");
+        return;
+    }
+
+    userPseudo = p.toUpperCase();
+
+    document.getElementById("login-section").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+
+    loadAll();
 }
+
 
 /* NAV */
 function showTab(id){
