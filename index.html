@@ -100,16 +100,31 @@ let currentUser = null;
 
 document.getElementById("btn-login").addEventListener("click", login);
 
-async function login(){
-    const email = pseudo.value;
-    const password = document.getElementById("password").value;
+async function login() {
+    const p = document.getElementById('pseudo').value;
+    const pw = document.getElementById('password').value;
 
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-    if(error){
-        alert(error.message);
+    if(!p || !pw){
+        alert("Remplir les champs");
         return;
     }
+
+    const emailFinal = p.toLowerCase().trim() + "@emasi.stock";
+
+    const { data, error } = await sb.auth.signInWithPassword({
+        email: emailFinal,
+        password: pw
+    });
+
+    if(error){
+        alert("Identifiants incorrects.");
+        console.error(error);
+        return;
+    }
+
+    await checkUser(); // ⚠️ important
+}
+
 
     currentUser = data.user;
     login-section.style.display = "none";
